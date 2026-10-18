@@ -1,0 +1,13 @@
+id = "aider"
+name = "Aider"
+vendor = "Aider"
+docs = ["https://aider.chat/docs/"]
+policy = "No automatic cleanup. Chat history lives in each repo (.aider.chat.history.md)."
+processes = ["aider", "aider.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "caches"
+path = "{home}/.aider/caches"
+class = "regenerable"
+documented = true

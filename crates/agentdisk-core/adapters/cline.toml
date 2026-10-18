@@ -1,0 +1,45 @@
+id = "cline"
+name = "Cline"
+vendor = "Cline"
+docs = ["https://github.com/cline/cline/issues/3790"]
+policy = "No automatic cleanup. Deleting a task in the UI has been reported to leave its checkpoint data behind."
+processes = []
+verified = "2026-10 from issue reports"
+
+[[path]]
+id = "checkpoints-vscode"
+path = "{vscode:Code}/globalStorage/saoudrizwan.claude-dev/checkpoints"
+class = "user-data"
+documented = false
+note = "Shadow git repos; users report 100+ GB."
+
+[[path]]
+id = "checkpoints-cursor"
+path = "{vscode:Cursor}/globalStorage/saoudrizwan.claude-dev/checkpoints"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "checkpoints-windsurf"
+path = "{vscode:Windsurf}/globalStorage/saoudrizwan.claude-dev/checkpoints"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "tasks-vscode"
+path = "{vscode:Code}/globalStorage/saoudrizwan.claude-dev/tasks"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "browser-vscode"
+path = "{vscode:Code}/globalStorage/saoudrizwan.claude-dev/puppeteer"
+class = "regenerable"
+documented = false
+note = "Downloaded Chromium."
+
+[[path]]
+id = "cli-data"
+path = "{home}/.cline/data"
+class = "user-data"
+documented = false

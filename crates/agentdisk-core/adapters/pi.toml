@@ -1,0 +1,13 @@
+id = "pi"
+name = "pi"
+vendor = "pi"
+docs = []
+policy = "No automatic cleanup."
+processes = ["pi"]
+verified = "unverified"
+
+[[path]]
+id = "sessions"
+path = "{env:PI_CODING_AGENT_DIR|home/.pi/agent}/sessions"
+class = "user-data"
+documented = false

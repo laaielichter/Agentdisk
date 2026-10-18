@@ -1,0 +1,35 @@
+id = "codex"
+name = "OpenAI Codex"
+vendor = "OpenAI"
+docs = ["https://learn.chatgpt.com/docs/environments/git-worktrees"]
+policy = "The Codex app keeps the 15 most recent managed worktrees. CLI worktrees and session rollouts are not cleaned automatically."
+cleanup = "codex archive / codex delete"
+processes = ["codex", "codex.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "worktrees"
+path = "{env:CODEX_HOME|home/.codex}/worktrees/*"
+kind = "worktree"
+class = "user-data"
+marker = "/.codex/worktrees/"
+documented = true
+
+[[path]]
+id = "sessions"
+path = "{env:CODEX_HOME|home/.codex}/sessions"
+class = "user-data"
+documented = false
+note = "Rollout transcripts (may contain secrets)."
+
+[[path]]
+id = "archived-sessions"
+path = "{env:CODEX_HOME|home/.codex}/archived_sessions"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "log"
+path = "{env:CODEX_HOME|home/.codex}/log"
+class = "regenerable"
+documented = false

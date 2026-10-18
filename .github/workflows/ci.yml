@@ -30,6 +30,18 @@ jobs:
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
       - name: Test
-        run: cargo test --all
+        run: cargo test --all --locked
       - name: Smoke test
-        run: cargo run -q -p agentdisk -- --version
+        shell: bash
+        run: |
+          cargo run -q -p agentdisk -- --version
+          cargo run -q -p agentdisk -- adapters
+          cargo run -q -p agentdisk -- scan -p .
+          cargo run -q -p agentdisk -- check
+          cargo run -q -p agentdisk -- size .
+      - name: Plugin manifests are valid JSON
+        shell: bash
+        run: |
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json .mcp.json hooks/hooks.json gemini-extension.json; do
+            python3 -m json.tool "$f" > /dev/null || { echo "invalid: $f"; exit 1; }
+          done

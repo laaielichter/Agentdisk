@@ -1,0 +1,12 @@
+{
+  "name": "agentdisk",
+  "owner": { "name": "laaielichter" },
+  "plugins": [
+    {
+      "name": "agentdisk",
+      "source": "./",
+      "description": "Disk report and safe cleanup for AI coding agents (worktrees, checkpoints, caches, node_modules, .godot).",
+      "version": "0.1.0"
+    }
+  ]
+}

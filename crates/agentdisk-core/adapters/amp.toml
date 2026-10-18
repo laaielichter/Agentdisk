@@ -1,0 +1,19 @@
+id = "amp"
+name = "Amp"
+vendor = "Sourcegraph"
+docs = ["https://ampcode.com/manual"]
+policy = "Threads live on the server; the local copy is a mirror."
+processes = ["amp", "amp.exe"]
+verified = "unverified"
+
+[[path]]
+id = "threads"
+path = "{xdg_data}/amp/threads"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "logs"
+path = "{xdg_cache}/amp/logs"
+class = "regenerable"
+documented = false

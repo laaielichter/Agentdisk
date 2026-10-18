@@ -1,0 +1,14 @@
+id = "zed"
+name = "Zed agent"
+vendor = "Zed Industries"
+docs = ["https://github.com/zed-industries/zed/discussions/32335"]
+policy = "No documented cleanup."
+processes = ["zed", "zed.exe", "zed-editor"]
+verified = "unverified"
+
+[[path]]
+id = "threads"
+path = "{xdg_data}/zed/threads"
+class = "user-data"
+documented = false
+platforms = ["linux"]

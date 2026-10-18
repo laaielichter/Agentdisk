@@ -1,0 +1,12 @@
+{
+  "name": "agentdisk",
+  "version": "0.1.0",
+  "description": "Disk report and safe cleanup for AI coding agents.",
+  "contextFileName": "AGENTS.md",
+  "mcpServers": {
+    "agentdisk": {
+      "command": "agentdisk",
+      "args": ["mcp"]
+    }
+  }
+}

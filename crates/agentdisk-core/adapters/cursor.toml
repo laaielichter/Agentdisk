@@ -1,0 +1,46 @@
+id = "cursor"
+name = "Cursor"
+vendor = "Anysphere"
+docs = ["https://cursor.com/docs/configuration/worktrees"]
+policy = "Cursor 3.5+ removes worktrees beyond cursor.worktreeMaxCount (25) or cursor.worktreesGlobalMaxSizeGb (50), every 6 hours. This can include worktrees it did not create."
+processes = ["cursor", "cursor.exe", "cursor-agent"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "worktrees"
+path = "{home}/.cursor/worktrees/*/*"
+kind = "worktree"
+class = "user-data"
+marker = "/.cursor/worktrees/"
+documented = true
+
+[[path]]
+id = "agent-transcripts"
+path = "{home}/.cursor/projects"
+class = "user-data"
+documented = true
+
+[[path]]
+id = "cli-chats"
+path = "{home}/.cursor/chats"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "acp-sessions"
+path = "{home}/.cursor/acp-sessions"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "extensions"
+path = "{home}/.cursor/extensions"
+class = "protected"
+documented = true
+
+[[path]]
+id = "editor-storage"
+path = "{vscode:Cursor}/workspaceStorage"
+class = "user-data"
+documented = false
+note = "Editor state incl. chat databases (state.vscdb)."

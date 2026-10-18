@@ -1,0 +1,20 @@
+id = "gemini-cli"
+name = "Gemini CLI"
+vendor = "Google"
+docs = ["https://geminicli.com/docs/cli/session-management/"]
+policy = "general.sessionRetention deletes sessions older than 30 days by default."
+processes = ["gemini", "gemini.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "sessions"
+path = "{home}/.gemini/tmp"
+class = "user-data"
+documented = true
+note = "Chats, checkpoints, plans and logs per project."
+
+[[path]]
+id = "extensions"
+path = "{home}/.gemini/extensions"
+class = "protected"
+documented = true

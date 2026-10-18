@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agentdisk": {
+      "command": "agentdisk",
+      "args": ["mcp"]
+    }
+  }
+}

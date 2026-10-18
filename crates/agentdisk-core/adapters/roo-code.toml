@@ -1,0 +1,13 @@
+id = "roo-code"
+name = "Roo Code"
+vendor = "Roo Code"
+docs = ["https://github.com/RooCodeInc/Roo-Code/issues/6618"]
+policy = "No automatic cleanup. History is keyed by absolute project path, so moved projects leave orphans."
+processes = []
+verified = "unverified"
+
+[[path]]
+id = "storage-vscode"
+path = "{vscode:Code}/globalStorage/rooveterinaryinc.roo-cline"
+class = "user-data"
+documented = false

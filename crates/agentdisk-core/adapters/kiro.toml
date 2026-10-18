@@ -1,0 +1,19 @@
+id = "kiro"
+name = "Kiro"
+vendor = "AWS"
+docs = ["https://github.com/kirodotdev/Kiro/issues/5469"]
+policy = "No automatic cleanup; users report session folders of 1-2 GB each."
+processes = ["kiro", "kiro.exe", "kiro-cli"]
+verified = "unverified"
+
+[[path]]
+id = "cli-sessions"
+path = "{home}/.kiro/sessions"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "ide-agent"
+path = "{vscode:Kiro}/globalStorage/kiro.kiroagent"
+class = "user-data"
+documented = false

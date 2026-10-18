@@ -1,0 +1,53 @@
+id = "claude-code"
+name = "Claude Code"
+vendor = "Anthropic"
+docs = [
+  "https://code.claude.com/docs/en/claude-directory",
+  "https://code.claude.com/docs/en/worktrees",
+  "https://code.claude.com/docs/en/data-usage",
+]
+policy = "Deletes transcripts older than cleanupPeriodDays (default 30). Clean subagent worktrees are swept; --worktree and 'claude -p --worktree' worktrees are kept."
+cleanup = "claude project purge --dry-run"
+processes = ["claude", "claude.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "transcripts"
+path = "{env:CLAUDE_CONFIG_DIR|home/.claude}/projects"
+class = "user-data"
+documented = true
+note = "Session transcripts (plaintext, may contain secrets). Includes project memory, which is never removed."
+
+[[path]]
+id = "file-history"
+path = "{env:CLAUDE_CONFIG_DIR|home/.claude}/file-history"
+class = "user-data"
+documented = true
+note = "Pre-edit snapshots used for checkpoint restore."
+
+[[path]]
+id = "debug-logs"
+path = "{env:CLAUDE_CONFIG_DIR|home/.claude}/debug"
+class = "regenerable"
+documented = true
+
+[[path]]
+id = "shell-snapshots"
+path = "{env:CLAUDE_CONFIG_DIR|home/.claude}/shell-snapshots"
+class = "regenerable"
+documented = true
+
+[[path]]
+id = "plugins"
+path = "{env:CLAUDE_CONFIG_DIR|home/.claude}/plugins"
+class = "protected"
+documented = true
+
+[[path]]
+id = "worktrees"
+path = "{repo}/.claude/worktrees/*"
+kind = "worktree"
+class = "user-data"
+marker = "/.claude/worktrees/"
+documented = true
+note = "Found while scanning project folders."

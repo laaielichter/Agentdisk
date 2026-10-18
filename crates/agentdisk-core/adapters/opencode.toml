@@ -1,0 +1,20 @@
+id = "opencode"
+name = "OpenCode"
+vendor = "SST"
+docs = ["https://opencode.ai/docs/"]
+policy = "No automatic cleanup of sessions; logs keep the 10 most recent files."
+cleanup = "opencode session delete"
+processes = ["opencode", "opencode.exe"]
+verified = "unverified"
+
+[[path]]
+id = "data"
+path = "{xdg_data}/opencode"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "log"
+path = "{xdg_data}/opencode/log"
+class = "regenerable"
+documented = false

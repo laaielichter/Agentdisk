@@ -1,0 +1,30 @@
+id = "copilot"
+name = "GitHub Copilot CLI / app"
+vendor = "GitHub"
+docs = [
+  "https://docs.github.com/en/copilot/concepts/security-governance-and-network-settings/session-data",
+  "https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/chronicle",
+]
+policy = "No automatic cleanup. Sessions may also be synced to GitHub, so a local delete is not a remote delete."
+cleanup = "/session delete (inside Copilot CLI)"
+processes = ["copilot", "copilot.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "session-state"
+path = "{home}/.copilot/session-state"
+class = "user-data"
+documented = true
+note = "Sessions and checkpoints."
+
+[[path]]
+id = "logs"
+path = "{home}/.copilot/logs"
+class = "regenerable"
+documented = true
+
+[[path]]
+id = "vscode-chat"
+path = "{vscode:Code}/globalStorage/github.copilot-chat"
+class = "user-data"
+documented = false

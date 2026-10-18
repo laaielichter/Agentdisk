@@ -1,0 +1,15 @@
+id = "ollama"
+name = "Ollama (local models)"
+vendor = "Ollama"
+docs = ["https://github.com/ollama/ollama/blob/main/docs/faq.md"]
+policy = "Models stay until you remove them."
+cleanup = "ollama rm <model>"
+processes = ["ollama", "ollama.exe"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "models"
+path = "{env:OLLAMA_MODELS|home/.ollama/models}"
+class = "model"
+documented = true
+note = "Re-downloadable but large. Never removed automatically."

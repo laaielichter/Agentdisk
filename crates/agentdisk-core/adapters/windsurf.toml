@@ -1,0 +1,19 @@
+id = "windsurf"
+name = "Windsurf"
+vendor = "Cognition"
+docs = ["https://docs.windsurf.com/windsurf/cascade/memories"]
+policy = "No documented cleanup."
+processes = ["windsurf", "windsurf.exe"]
+verified = "unverified"
+
+[[path]]
+id = "cascade"
+path = "{home}/.codeium/windsurf/cascade"
+class = "user-data"
+documented = false
+
+[[path]]
+id = "memories"
+path = "{home}/.codeium/windsurf/memories"
+class = "protected"
+documented = true
