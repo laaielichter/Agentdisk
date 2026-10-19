@@ -124,7 +124,8 @@ fn find_virtual_disks(
             "Docker/wsl/data/ext4.vhdx",
             "Docker/wsl/main/ext4.vhdx",
         ] {
-            found.push(local.join(rel));
+            // Join per component so Windows paths use one kind of separator.
+            found.push(rel.split('/').fold(local.to_path_buf(), |p, c| p.join(c)));
         }
         let base = paths::slashed(local);
         found.extend(
@@ -178,6 +179,9 @@ pub fn advise(r: &Report) -> Vec<Advice> {
     let mut out = Vec::new();
     let threads = size::default_threads();
 
+    // 0. Big agent history and models: what helps, and what does not.
+    out.extend(big_agent_data(r));
+
     // 1. Identical dependency trees (same folder type + same lockfile).
     let mut groups: BTreeMap<(String, String, u64), Vec<(PathBuf, u64)>> = BTreeMap::new();
     for e in &r.eco {
@@ -213,7 +217,7 @@ pub fn advise(r: &Report) -> Vec<Advice> {
         let (fix, cmds): (&str, Vec<String>) = match (dir.as_str(), lock.as_str()) {
             ("node_modules", "pnpm-lock.yaml") => (
                 "They already use pnpm, but the copies are not shared. Keep the pnpm store on the same drive as the projects so pnpm can hardlink.",
-                vec![format!("pnpm store path   # should be on the same drive as your projects")],
+                vec!["pnpm store path   # should be on the same drive as your projects".to_string()],
             ),
             ("node_modules", _) => (
                 "Switch these projects to pnpm: one shared store, hardlinked into each worktree.",
@@ -420,6 +424,160 @@ pub fn advise(r: &Report) -> Vec<Advice> {
     out
 }
 
+/// File types that are already compressed, or barely compress
+/// (archives, media, model weights).
+const PACKED: &[&str] = &[
+    "zst",
+    "gz",
+    "tgz",
+    "zip",
+    "7z",
+    "xz",
+    "bz2",
+    "br",
+    "lz4",
+    "rar",
+    "png",
+    "jpg",
+    "jpeg",
+    "webp",
+    "gif",
+    "mp4",
+    "mkv",
+    "mov",
+    "webm",
+    "mp3",
+    "ogg",
+    "flac",
+    "m4a",
+    "gguf",
+    "safetensors",
+    "pck",
+    "ctex",
+    "ktx2",
+    "basis",
+];
+
+/// Byte totals per extension for up to `limit` files under `dir`.
+/// Returns (bytes seen, bytes in PACKED types, top extensions by size).
+pub fn extension_mix(dir: &std::path::Path, limit: usize) -> (u64, u64, Vec<(String, u64)>) {
+    let mut by_ext: BTreeMap<String, u64> = BTreeMap::new();
+    let mut stack = vec![dir.to_path_buf()];
+    let mut files = 0;
+    while let Some(d) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&d) else {
+            continue;
+        };
+        for e in entries.flatten() {
+            let Ok(ft) = e.file_type() else { continue };
+            if ft.is_symlink() {
+                continue;
+            }
+            if ft.is_dir() {
+                stack.push(e.path());
+            } else if let Ok(m) = e.metadata() {
+                let p = e.path();
+                let ext = p
+                    .extension()
+                    .map(|x| x.to_string_lossy().to_lowercase())
+                    .unwrap_or_else(|| "(none)".into());
+                *by_ext.entry(ext).or_default() += m.len();
+                files += 1;
+                if files >= limit {
+                    stack.clear();
+                    break;
+                }
+            }
+        }
+    }
+    let total: u64 = by_ext.values().sum();
+    let packed: u64 = by_ext
+        .iter()
+        .filter(|(k, _)| PACKED.contains(&k.as_str()))
+        .map(|(_, v)| *v)
+        .sum();
+    let mut top: Vec<(String, u64)> = by_ext.into_iter().collect();
+    top.sort_by_key(|t| std::cmp::Reverse(t.1));
+    top.truncate(3);
+    (total, packed, top)
+}
+
+/// Environment variable an adapter template lets you move the data with,
+/// e.g. `{env:CODEX_HOME|home/.codex}/sessions` → `CODEX_HOME`.
+fn move_var(template: &str) -> Option<&str> {
+    let rest = template.strip_prefix("{env:")?;
+    let end = rest.find(['|', '}'])?;
+    Some(&rest[..end])
+}
+
+const BIG: u64 = 1024 * 1024 * 1024;
+
+fn big_agent_data(r: &Report) -> Vec<Advice> {
+    use crate::adapters::Class;
+    let mut out = Vec::new();
+    let mut items: Vec<&crate::scan::AgentItem> = r
+        .agents
+        .iter()
+        .filter(|a| !a.nested && a.totals.allocated_bytes >= BIG)
+        .filter(|a| matches!(a.class, Class::UserData | Class::Model | Class::Download))
+        .collect();
+    items.sort_by_key(|a| std::cmp::Reverse(a.totals.allocated_bytes));
+    for a in items {
+        let adapter = r.adapters.iter().find(|x| x.id == a.adapter);
+        let entry = adapter.and_then(|x| x.paths.iter().find(|p| p.id == a.what));
+        let (seen, packed, top) = extension_mix(&a.path, 20_000);
+        let pct = (packed * 100).checked_div(seen).unwrap_or(0);
+        let types = top
+            .iter()
+            .map(|(e, b)| format!(".{e} {}", human(*b)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let kind = match a.class {
+            Class::UserData => "This is your history; agentdisk never removes it.",
+            _ => "These are downloads; remove them with the tool itself.",
+        };
+        let history = a.class == Class::UserData;
+        let worth_compacting = history && pct < 70;
+        let compress = if !history {
+            "Model weights and downloads barely compress.".to_string()
+        } else if worth_compacting {
+            format!(
+                "Only {pct}% is already compressed (types: {types}). If it is rarely written, `agentdisk compact` can shrink it."
+            )
+        } else {
+            format!("{pct}% is already compressed or does not compress (types: {types}), so compression will not help.")
+        };
+        let mut commands = Vec::new();
+        if let Some(c) = adapter.and_then(|x| x.cleanup.as_ref()) {
+            commands.push(format!("{c}   # the tool's own cleanup"));
+        }
+        if worth_compacting {
+            commands.push(format!(
+                "agentdisk compact \"{}\" --dry-run",
+                display(&a.path)
+            ));
+        }
+        if let Some(var) = entry.and_then(|e| move_var(&e.template)) {
+            commands.push(format!(
+                "close {}, move the folder to a bigger drive, then set {var} to the new location",
+                adapter.map(|x| x.name.as_str()).unwrap_or("the tool")
+            ));
+        }
+        out.push(Advice {
+            title: format!(
+                "{} {} uses {}",
+                a.agent,
+                a.what,
+                human(a.totals.allocated_bytes)
+            ),
+            detail: format!("{kind} {compress}"),
+            saving: None,
+            commands,
+        });
+    }
+    out
+}
+
 pub fn render(list: &[Advice]) -> String {
     let mut out = String::from("agentdisk advise — ways to need less space\n\n");
     if list.is_empty() {
@@ -493,6 +651,87 @@ mod tests {
         assert_eq!(find_virtual_disks(&local, &root, "windows").len(), 2);
         assert_eq!(find_virtual_disks(&local, &root, "macos").len(), 1);
         assert!(find_virtual_disks(&local, &root, "linux").is_empty());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn extension_mix_and_move_var() {
+        let root = temp_dir("extmix");
+        fs::create_dir_all(root.join("2026/10")).unwrap();
+        fs::write(root.join("2026/10/a.jsonl.zst"), vec![0u8; 9000]).unwrap();
+        fs::write(root.join("2026/10/b.jsonl"), vec![b'x'; 1000]).unwrap();
+        let (total, packed, top) = extension_mix(&root, 100);
+        assert_eq!((total, packed), (10_000, 9000));
+        assert_eq!(top[0].0, "zst");
+        assert_eq!(
+            move_var("{env:CODEX_HOME|home/.codex}/sessions"),
+            Some("CODEX_HOME")
+        );
+        assert_eq!(move_var("{env:OLLAMA_MODELS}"), Some("OLLAMA_MODELS"));
+        assert_eq!(move_var("{home}/.x"), None);
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn advises_on_big_compressed_history() {
+        let root = temp_dir("bighist");
+        fs::write(root.join("r.jsonl.zst"), vec![0u8; 4096]).unwrap();
+        let (adapters, _) = crate::adapters::load(&[]);
+        let totals = crate::size::Totals {
+            allocated_bytes: 3 * BIG,
+            ..Default::default()
+        };
+        let report = Report {
+            agents: vec![crate::scan::AgentItem {
+                adapter: "codex".into(),
+                agent: "OpenAI Codex".into(),
+                what: "archived-sessions".into(),
+                path: root.clone(),
+                class: crate::adapters::Class::UserData,
+                documented: false,
+                note: None,
+                totals,
+                nested: false,
+            }],
+            adapters,
+            ..Default::default()
+        };
+        let list = big_agent_data(&report);
+        assert_eq!(list.len(), 1);
+        let a = &list[0];
+        assert!(
+            a.title
+                .contains("OpenAI Codex archived-sessions uses 3.00 GiB"),
+            "{}",
+            a.title
+        );
+        assert!(
+            a.detail.contains("compression will not help"),
+            "{}",
+            a.detail
+        );
+        assert!(a.commands.iter().any(|c| c.contains("codex")));
+        assert!(a.commands.iter().any(|c| c.contains("CODEX_HOME")));
+        assert!(!a.commands.iter().any(|c| c.contains("compact")));
+
+        // Models without extensions (like Ollama blobs) never get compact advice.
+        fs::write(root.join("sha256-abc"), vec![1u8; 9000]).unwrap();
+        let mut report = report;
+        report.agents[0].class = crate::adapters::Class::Model;
+        report.agents[0].adapter = "ollama".into();
+        report.agents[0].what = "models".into();
+        let list = big_agent_data(&report);
+        assert!(
+            list[0].detail.contains("barely compress"),
+            "{}",
+            list[0].detail
+        );
+        assert!(
+            !list[0].commands.iter().any(|c| c.contains("compact")),
+            "{:?}",
+            list[0].commands
+        );
+        assert!(list[0].commands.iter().any(|c| c.contains("OLLAMA_MODELS")));
         fs::remove_dir_all(&root).unwrap();
     }
 }

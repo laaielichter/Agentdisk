@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- `advise` now explains big agent history and model folders (1 GB and up): how much is already compressed, whether `agentdisk compact` can help, the tool's own cleanup command, and which environment variable moves the folder to another drive.
+- Model and download folders never get compression advice (weights barely compress).
+- Fixes for lints from newer clippy versions.
+- Consistent path separators in virtual disk advice on Windows.
+
 ## 0.2.0
 
 - New: `agentdisk explain <dir>` (and MCP tool `agentdisk_explain`) says what a folder is, which agent or tool made it, and whether a cleanup plan would include it, and why.

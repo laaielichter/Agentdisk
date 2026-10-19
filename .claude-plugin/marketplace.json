@@ -6,7 +6,7 @@
       "name": "agentdisk",
       "source": "./",
       "description": "Disk report and safe cleanup for AI coding agents (worktrees, checkpoints, caches, node_modules, .godot).",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }

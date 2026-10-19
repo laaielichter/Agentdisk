@@ -1,6 +1,6 @@
 {
   "name": "agentdisk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The honest disk report for AI coding agents: what every agent left on disk, what is really reclaimable, and a safe, reversible cleanup.",
   "author": { "name": "laaielichter" },
   "homepage": "https://github.com/laaielichter/agentdisk",

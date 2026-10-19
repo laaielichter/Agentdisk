@@ -53,7 +53,7 @@ pub fn allocated(_path: &Path, meta: &Metadata, _cluster: u64) -> u64 {
 
 #[cfg(windows)]
 pub fn allocated(path: &Path, meta: &Metadata, cluster: u64) -> u64 {
-    let raw = win::compressed_size(path).unwrap_or_else(|| meta.len());
+    let raw = win::compressed_size(path).unwrap_or(meta.len());
     round_up(raw, cluster)
 }
 
