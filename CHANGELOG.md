@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New adapter: ReversePort. Its tool output, lookup cache, extracted files and reports are regenerable; port plans, blueprints, dossiers and scenes are user data; proof cases, feedback and the engine's state are never touched. Honors `REVERSEPORT_HOME`.
+- Releases are made by pushing a version tag; the README points to the downloads.
+
 ## 0.2.1
 
 - `advise` now explains big agent history and model folders (1 GB and up): how much is already compressed, whether `agentdisk compact` can help, the tool's own cleanup command, and which environment variable moves the folder to another drive.

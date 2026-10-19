@@ -128,6 +128,7 @@ const BUILTIN: &[(&str, &str)] = &[
     ("lmstudio", include_str!("../adapters/lmstudio.toml")),
     ("huggingface", include_str!("../adapters/huggingface.toml")),
     ("godot", include_str!("../adapters/godot.toml")),
+    ("reverseport", include_str!("../adapters/reverseport.toml")),
 ];
 
 /// Built-in adapters plus any `*.toml` in the given extra directories.
@@ -523,6 +524,35 @@ mod tests {
         }
         let ids: std::collections::HashSet<_> = adapters.iter().map(|a| &a.id).collect();
         assert_eq!(ids.len(), adapters.len(), "duplicate ids");
+    }
+
+    #[test]
+    fn reverseport_keeps_proof_and_plans_out_of_cleanup() {
+        let (adapters, _) = load(&[]);
+        let rp = adapters.iter().find(|a| a.id == "reverseport").unwrap();
+        let class = |id: &str| rp.paths.iter().find(|p| p.id == id).unwrap().class;
+        for id in ["proof-cases", "feedback", "engine-state"] {
+            assert_eq!(class(id), Class::Protected, "{id}");
+        }
+        for id in ["ports", "blueprints", "lookups", "scenes"] {
+            assert_eq!(class(id), Class::UserData, "{id}");
+        }
+        for id in [
+            "tool-output",
+            "lookup-cache",
+            "extracted",
+            "reports",
+            "engine-cache",
+        ] {
+            assert_eq!(class(id), Class::Regenerable, "{id}");
+        }
+        assert!(rp
+            .paths
+            .iter()
+            .filter(|p| p.id != "engine-cache" && p.id != "engine-state")
+            .all(|p| p
+                .template
+                .starts_with("{env:REVERSEPORT_HOME|home/.reverseport}/")));
     }
 
     #[test]
