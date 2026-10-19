@@ -1,9 +1,9 @@
 name: CI
 
-# Manual for now: hosted runners are not available for this repository.
-# Run ./scripts/check.ps1 (Windows) or ./scripts/check.sh locally instead.
-# To run on every push again, add:  push: { branches: [main] }  and  pull_request:
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
