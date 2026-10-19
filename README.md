@@ -95,6 +95,9 @@ tool to move or delete files.
 /plugin install agentdisk@agentdisk
 ```
 
+Already using the ReversePort marketplace? `/plugin install agentdisk@reverseport` works too. The plugin starts
+the `agentdisk` binary, so [install it](#install) first.
+
 **Cursor, Codex, GitHub Copilot, Gemini CLI, Cline, Windsurf, Kiro, Zed, OpenCode:** see
 [docs/clients.md](docs/clients.md).
 
@@ -139,6 +142,18 @@ come from user reports and are reported only.
 - Copy-on-write clones (ReFS block cloning, APFS clones, Btrfs reflinks) still count as separate space.
 - "In use" detection: Windows refuses to move open folders; Linux checks open files; macOS relies on idle time and editor detection.
 - Agent storage paths change between versions; `agentdisk adapters` shows what was found on your machine.
+
+## Sister tools
+
+From the same author; local, open source, each with its own MCP server.
+
+- [**Stashpad**](https://github.com/laaielichter/stashpad): memory for agents that you can read, edit and trust. Plain Markdown files with a source and dates, and a
+  review queue for agent writes.
+- [**ReversePort**](https://github.com/laaielichter/reverseport): reverse engineer apps, games, binaries and websites and port them between Godot, Unity, Unreal, three.js
+  and languages.
+
+In Claude Code you can get all three from one marketplace: `/plugin marketplace add laaielichter/reverseport`,
+then `/plugin install reverseport@reverseport`, `stashpad@reverseport` or `agentdisk@reverseport`.
 
 ## Contributing
 
