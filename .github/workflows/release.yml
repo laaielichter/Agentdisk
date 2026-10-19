@@ -1,9 +1,12 @@
 name: Release
 
-# Runs when a version tag is pushed (`git tag v0.2.1 && git push origin v0.2.1`; the workflow creates the
-# release) or when a release is published on GitHub (the release creates the tag).
+# Makes a release with binaries for the version in Cargo.toml, three ways:
+# - a push to main whose Cargo.toml version has no release yet (bump the version, merge, done);
+# - a pushed tag like v0.3.0 (`git tag v0.3.0 && git push origin v0.3.0`);
+# - a release published by hand on GitHub.
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   release:
     types: [published]
@@ -11,23 +14,46 @@ on:
 permissions:
   contents: write
 
+# Two quick merges must not build the same release twice.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   version:
-    name: tag matches Cargo.toml
+    name: version and tag
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      release: ${{ steps.v.outputs.release }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compare
+      - id: v
+        name: Compare
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           crate=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          if [ "${GITHUB_REF_NAME}" != "v${crate}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${crate} (expected v${crate})."
-            exit 1
+          tag="v${crate}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] || [ "${GITHUB_EVENT_NAME}" = "release" ]; then
+            if [ "${GITHUB_REF_NAME}" != "${tag}" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${crate} (expected ${tag})."
+              exit 1
+            fi
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${tag} already exists; nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release for ${tag} yet; building one."
+            echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
   build:
     needs: version
+    if: needs.version.outputs.release == 'true'
     name: build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -48,7 +74,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          name=agentdisk-${GITHUB_REF_NAME}-${{ matrix.target }}
+          name=agentdisk-${{ needs.version.outputs.tag }}-${{ matrix.target }}
           mkdir -p dist/$name
           cp target/${{ matrix.target }}/release/agentdisk${{ matrix.ext }} dist/$name/
           cp README.md LICENSE LICENSE-APACHE dist/$name/
@@ -64,7 +90,7 @@ jobs:
           path: dist/*.*z*
 
   release:
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -75,7 +101,8 @@ jobs:
         run: cd dist && sha256sum * > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
-          name: agentdisk ${{ github.ref_name }}
+          tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: agentdisk ${{ needs.version.outputs.tag }}
           generate_release_notes: true
           files: dist/*

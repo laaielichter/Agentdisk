@@ -4,11 +4,11 @@ version = 3
 
 [[package]]
 name = "agentdisk"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "agentdisk-core",
 ]
 
 [[package]]
 name = "agentdisk-core"
-version = "0.2.1"
+version = "0.3.0"
