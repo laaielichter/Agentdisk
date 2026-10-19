@@ -1,0 +1,107 @@
+id = "reverseport"
+name = "ReversePort"
+vendor = "ReversePort"
+docs = [
+  "https://github.com/laaielichter/reverseport/blob/main/docs/installation.md#diagnose-update-and-remove",
+  "https://github.com/laaielichter/reverseport/blob/main/docs/proof-and-memory.md",
+]
+policy = "Never deletes its own workspace. `reverseport uninstall --purge-data` removes only the engine's cache and state under ~/.rea."
+cleanup = "reverseport uninstall --purge-data (engine cache and state only)"
+processes = ["reverseport"]
+verified = "2026-10 from source"
+
+# ReversePort's own workspace (REVERSEPORT_HOME, else ~/.reverseport). Originals are only read; everything
+# ReversePort writes lands here or in a port's chosen output folder.
+
+[[path]]
+id = "tool-output"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/tool-output"
+class = "regenerable"
+documented = true
+note = "Full results of large tool calls, saved so they do not flood the agent's context. Running the tool again writes them again."
+
+[[path]]
+id = "lookup-cache"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/lookup-cache"
+class = "regenerable"
+documented = true
+note = "Cached answers from public sources for `reverseport lookup`."
+
+[[path]]
+id = "extracted"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/extracted"
+class = "regenerable"
+documented = true
+note = "Files unpacked from packs and archives (.pck, zip, apk, asar). Extracting the original again recreates them."
+
+[[path]]
+id = "reports"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/reports"
+class = "regenerable"
+documented = true
+note = "Generated ARCHITECTURE.md files; `reverseport report <folder>` writes them again."
+
+[[path]]
+id = "github-mirrors"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/lookup/github"
+class = "download"
+documented = true
+note = "Mirrored public repositories from `lookup --github owner/repo --mirror`."
+
+[[path]]
+id = "ports"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/ports"
+class = "user-data"
+documented = true
+note = "Port plans with per-unit progress. Losing one means starting the port over."
+
+[[path]]
+id = "blueprints"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/blueprints"
+class = "user-data"
+documented = true
+note = "Clean-room rebuild specs, parity tables and project skeletons."
+
+[[path]]
+id = "lookups"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/lookups"
+class = "user-data"
+documented = true
+note = "Saved lookup dossiers that blueprints refer to by id."
+
+[[path]]
+id = "scenes"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/scenes"
+class = "user-data"
+documented = true
+note = "Converted scenes and prefabs."
+
+[[path]]
+id = "proof-cases"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/cases"
+class = "protected"
+documented = true
+note = "Proof cases: evidence with hashes, claims, decisions and test logs. Never cleaned."
+
+[[path]]
+id = "feedback"
+path = "{env:REVERSEPORT_HOME|home/.reverseport}/feedback"
+class = "protected"
+documented = true
+note = "Notes agents left with share_feedback."
+
+# The deep-analysis engine keeps its own data under ~/.rea.
+
+[[path]]
+id = "engine-cache"
+path = "{home}/.rea/cache"
+class = "regenerable"
+documented = true
+note = "Engine cache; `reverseport uninstall --purge-data` removes it too."
+
+[[path]]
+id = "engine-state"
+path = "{home}/.rea/state"
+class = "protected"
+documented = true
+note = "Engine state (sessions, provider settings)."

@@ -107,7 +107,8 @@ the `agentdisk` binary, so [install it](#install) first.
 ## Supported agents and tools
 
 Claude Code · Cursor · OpenAI Codex · GitHub Copilot · Gemini CLI · Cline · Roo Code · Windsurf ·
-Kiro · OpenCode · Amp · Aider · Zed · pi · Ollama · LM Studio · Hugging Face cache · Godot editor
+Kiro · OpenCode · Amp · Aider · Zed · pi · Ollama · LM Studio · Hugging Face cache · Godot editor ·
+ReversePort
 
 Each one is a small TOML file. Missing one, or a path changed? [Add an adapter](docs/adapters.md).
 
@@ -115,7 +116,7 @@ Each one is a small TOML file. Missing one, or a path changed? [Add an adapter](
 
 | | agentdisk | Disk analyzers (WizTree, dua, WinDirStat) | Build cleaners (kondo, npkill) | Agents' own cleanup |
 |---|---|---|---|---|
-| Knows which agent made a folder | Yes, 18 agents and tools | No | No | Only its own |
+| Knows which agent made a folder | Yes, 19 agents and tools | No | No | Only its own |
 | Knows what is safe to delete | Yes, with git checks | No | Build folders only | Its own data |
 | Counts hardlinked bytes once | Yes | Some do | No | — |
 | Undo | Quarantine + restore | No | No | Varies |
