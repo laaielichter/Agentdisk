@@ -41,8 +41,11 @@ agentdisk restore <plan-id>      # changed your mind? everything goes back
 
 ## Install
 
-Prebuilt binaries will be on the Releases page. Until then, build from source with
-[Rust](https://rustup.rs) 1.82 or newer:
+Download a prebuilt binary for Windows, macOS or Linux from the
+[Releases page](https://github.com/laaielichter/agentdisk/releases/latest), unpack it and put
+`agentdisk` on your `PATH`. `SHA256SUMS.txt` lists the checksums.
+
+Or build from source with [Rust](https://rustup.rs) 1.82 or newer:
 
 ```sh
 git clone https://github.com/laaielichter/agentdisk
