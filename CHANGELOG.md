@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - New adapter: ReversePort. Its tool output, lookup cache, extracted files and reports are regenerable; port plans, blueprints, dossiers and scenes are user data; proof cases, feedback and the engine's state are never touched. Honors `REVERSEPORT_HOME`.
-- Releases are made by pushing a version tag; the README points to the downloads.
+- Releases with binaries for Windows, macOS and Linux are made automatically when a new version in `Cargo.toml` reaches `main` (or when a version tag is pushed); the README points to the downloads.
 
 ## 0.2.1
 
