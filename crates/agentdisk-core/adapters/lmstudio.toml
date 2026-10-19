@@ -1,0 +1,20 @@
+id = "lmstudio"
+name = "LM Studio (local models)"
+vendor = "Element Labs"
+docs = ["https://lmstudio.ai/docs"]
+policy = "Models stay until you remove them in LM Studio."
+cleanup = "LM Studio → My Models → delete"
+processes = ["lm studio", "lm studio.exe", "lms", "lms.exe"]
+verified = "unverified"
+
+[[path]]
+id = "models"
+path = "{home}/.lmstudio/models"
+class = "model"
+documented = false
+
+[[path]]
+id = "models-legacy"
+path = "{home}/.cache/lm-studio/models"
+class = "model"
+documented = false

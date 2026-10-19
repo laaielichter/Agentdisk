@@ -1,0 +1,30 @@
+id = "godot"
+name = "Godot editor"
+vendor = "Godot Engine"
+docs = ["https://docs.godotengine.org/en/stable/tutorials/io/data_paths.html"]
+policy = "Godot keeps export templates for every version you installed."
+cleanup = "Editor → Manage Export Templates → remove old versions"
+processes = ["godot"]
+verified = "2026-10 from docs"
+
+[[path]]
+id = "export-templates"
+path = "{appdata}/Godot/export_templates"
+class = "download"
+documented = true
+platforms = ["windows", "macos"]
+note = "One folder per Godot version; old versions can be removed in the editor."
+
+[[path]]
+id = "export-templates"
+path = "{xdg_data}/godot/export_templates"
+class = "download"
+documented = true
+platforms = ["linux"]
+
+[[path]]
+id = "editor-cache"
+path = "{xdg_cache}/godot"
+class = "regenerable"
+documented = true
+platforms = ["linux"]

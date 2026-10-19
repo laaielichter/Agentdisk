@@ -107,6 +107,29 @@ fn known_caches() -> Vec<Cache> {
     ]
 }
 
+/// Docker Desktop and WSL virtual disk files that exist on this machine.
+pub fn virtual_disks() -> Vec<(PathBuf, u64)> {
+    let mut found: Vec<PathBuf> = Vec::new();
+    let local = paths::localappdata();
+    if cfg!(windows) {
+        for rel in ["Docker/wsl/disk/docker_data.vhdx", "Docker/wsl/data/ext4.vhdx", "Docker/wsl/main/ext4.vhdx"] {
+            found.push(local.join(rel));
+        }
+        found.extend(paths::expand(&format!("{}/Packages/*/LocalState", paths::slashed(&local))).into_iter().map(|p| p.join("ext4.vhdx")));
+        found.extend(paths::expand(&format!("{}/wsl/*", paths::slashed(&local))).into_iter().map(|p| p.join("ext4.vhdx")));
+    } else if cfg!(target_os = "macos") {
+        found.push(paths::home().join("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw"));
+    }
+    found
+        .into_iter()
+        .filter(|p| p.is_file())
+        .map(|p| {
+            let b = size::measure(&p, 1).map(|t| t.allocated_bytes).unwrap_or(0);
+            (p, b)
+        })
+        .collect()
+}
+
 pub fn pnpm_store() -> PathBuf {
     if let Some(p) = std::env::var_os("PNPM_STORE_DIR").filter(|s| !s.is_empty()) {
         return PathBuf::from(p);
@@ -305,6 +328,31 @@ pub fn advise(r: &Report) -> Vec<Advice> {
             detail: "cursor.worktreeMaxCount (25) and cursor.worktreesGlobalMaxSizeGb (50) limit growth. Cursor's cleanup can also remove worktrees made by other tools.".into(),
             saving: None,
             commands: vec!["Cursor settings → \"cursor.worktreesGlobalMaxSizeGb\": 20".into()],
+        });
+    }
+
+    // 7a. Virtual disks (Docker Desktop, WSL) grow but never shrink by themselves.
+    let disks = virtual_disks();
+    let disk_total: u64 = disks.iter().map(|d| d.1).sum();
+    if disk_total >= 5 * 1024 * 1024 * 1024 {
+        let list: Vec<String> = disks.iter().map(|(p, b)| format!("{} ({})", display(p), human(*b))).collect();
+        let mut commands = vec![
+            "docker system df            # what Docker itself is using".to_string(),
+            "docker builder prune        # build cache; safe, rebuilds on demand".to_string(),
+        ];
+        if cfg!(windows) {
+            commands.push("wsl --shutdown".into());
+            commands.push("wsl --manage <distro> --set-sparse true   # newer WSL: disk shrinks by itself".into());
+            commands.push("Optimize-VHD -Path <file.vhdx> -Mode Full # needs the Hyper-V PowerShell module".into());
+        }
+        out.push(Advice {
+            title: format!("Virtual disks use {}", human(disk_total)),
+            detail: format!(
+                "Docker and WSL disks keep their size after you delete things inside them. Clean inside first, then compact the disk. Files: {}",
+                list.join(", ")
+            ),
+            saving: None,
+            commands,
         });
     }
 

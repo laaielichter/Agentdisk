@@ -12,6 +12,7 @@ pub mod check;
 pub mod cleanup;
 pub mod compact;
 pub mod config;
+pub mod explain;
 pub mod git;
 pub mod json;
 pub mod mcp;

@@ -83,7 +83,7 @@ pub struct Report {
     pub projects: Vec<PathBuf>,
 }
 
-fn key(p: &Path) -> String {
+pub fn key(p: &Path) -> String {
     let s = slashed(&canon(p));
     if cfg!(windows) || cfg!(target_os = "macos") {
         s.to_lowercase()

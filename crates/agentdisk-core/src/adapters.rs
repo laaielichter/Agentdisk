@@ -35,6 +35,8 @@ pub enum Class {
     Protected,
     /// Downloadable but expensive (local AI models).
     Model,
+    /// Re-downloadable tool files (SDKs, export templates).
+    Download,
 }
 
 impl Class {
@@ -44,6 +46,7 @@ impl Class {
             "user-data" => Class::UserData,
             "protected" => Class::Protected,
             "model" => Class::Model,
+            "download" => Class::Download,
             _ => return None,
         })
     }
@@ -54,6 +57,7 @@ impl Class {
             Class::UserData => "user-data",
             Class::Protected => "protected",
             Class::Model => "model",
+            Class::Download => "download",
         }
     }
 }
@@ -121,6 +125,9 @@ const BUILTIN: &[(&str, &str)] = &[
     ("zed", include_str!("../adapters/zed.toml")),
     ("pi", include_str!("../adapters/pi.toml")),
     ("ollama", include_str!("../adapters/ollama.toml")),
+    ("lmstudio", include_str!("../adapters/lmstudio.toml")),
+    ("huggingface", include_str!("../adapters/huggingface.toml")),
+    ("godot", include_str!("../adapters/godot.toml")),
 ];
 
 /// Built-in adapters plus any `*.toml` in the given extra directories.

@@ -150,6 +150,15 @@ fn ignored_is_regenerable(entry: &str) -> bool {
         .any(|c| EXTRA.contains(&c) || projects::RULES.iter().any(|r| r.dir == c))
 }
 
+/// Exact name, or a prefix for longer names (`godot` matches
+/// `godot_v4.3-stable_win64.exe`).
+pub fn process_matches(procs: &[String], name: &str) -> bool {
+    let name = name.to_lowercase();
+    procs
+        .iter()
+        .any(|q| *q == name || (name.len() >= 5 && q.starts_with(&name)))
+}
+
 fn running_editor(procs: &[String], editor: &str) -> bool {
     procs.iter().any(|p| p.contains(editor))
 }
@@ -212,7 +221,7 @@ pub fn check_worktree(w: &WorktreeItem, now: u64, min_days: u64) -> Result<Strin
     ))
 }
 
-fn check_build(
+pub(crate) fn check_build(
     path: &Path,
     idle: Option<u64>,
     reclaim: u64,
@@ -347,9 +356,7 @@ pub fn make_plan(report: &Report, opts: &PlanOptions) -> Plan {
             let label = format!("{} {}", a.agent, a.what);
             let adapter = report.adapters.iter().find(|x| x.id == a.adapter);
             let running = adapter.is_some_and(|ad| {
-                ad.processes
-                    .iter()
-                    .any(|p| procs.iter().any(|q| q == &p.to_lowercase()))
+                ad.processes.iter().any(|p| process_matches(&procs, p))
             });
             let idle = a.totals.idle_days(now).unwrap_or(0);
             let reason = if running {

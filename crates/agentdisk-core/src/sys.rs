@@ -326,7 +326,8 @@ mod win {
     }
 
     pub fn volume_root(path: &Path) -> Option<String> {
-        let abs = std::fs::canonicalize(path).ok()?;
+        // Plain `C:\...` form: some volume APIs reject `\\?\` paths.
+        let abs = crate::paths::plain(&std::fs::canonicalize(path).ok()?);
         let name = wide(abs.as_os_str());
         let mut buf = vec![0u16; 1024];
         // SAFETY: buffers are valid for the given lengths.
@@ -356,7 +357,7 @@ mod win {
     }
 
     pub fn free_space(path: &Path) -> Option<(u64, u64)> {
-        let name = wide(path.as_os_str());
+        let name = wide(crate::paths::plain(path).as_os_str());
         let (mut avail, mut total, mut free) = (0u64, 0u64, 0u64);
         // SAFETY: NUL-terminated name and valid out-pointers.
         let ok = unsafe { GetDiskFreeSpaceExW(name.as_ptr(), &mut avail, &mut total, &mut free) };

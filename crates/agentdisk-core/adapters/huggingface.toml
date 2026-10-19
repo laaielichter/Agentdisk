@@ -1,0 +1,15 @@
+id = "huggingface"
+name = "Hugging Face cache"
+vendor = "Hugging Face"
+docs = ["https://huggingface.co/docs/huggingface_hub/guides/manage-cache"]
+policy = "Downloaded models and datasets stay until you delete them."
+cleanup = "hf cache scan  /  hf cache delete"
+processes = []
+verified = "2026-10 from docs"
+
+[[path]]
+id = "hub"
+path = "{env:HF_HOME|home/.cache/huggingface}/hub"
+class = "model"
+documented = true
+note = "Models shared by Python tools, ComfyUI-style apps and local agents."
