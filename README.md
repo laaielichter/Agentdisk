@@ -1,123 +1,149 @@
-# agentdisk
+<h1 align="center">agentdisk</h1>
+<p align="center"><b>The honest disk report for AI coding agents: what Claude Code, Cursor, Codex and friends left on your disk, and a cleanup you can undo.</b></p>
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT or Apache-2.0" src="https://img.shields.io/badge/license-MIT%20%7C%20Apache--2.0-blue"></a>
+  <img alt="Platforms: Windows, macOS, Linux" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational">
+  <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8A2BE2">
+</p>
+<p align="center">
+  <img src="docs/demo.gif" alt="agentdisk scanning agent worktrees and build folders, making a cleanup plan, and explaining why a worktree with a .env file is kept" width="900">
+  <br><sub>Real output on a test machine with sample projects.</sub>
+</p>
 
-**The honest disk report for AI coding agents.**
+agentdisk is a single-binary CLI and **MCP server** that finds the git worktrees, checkpoints,
+transcripts and duplicate `node_modules`, `.venv`, `target/` and `.godot/` folders that AI coding
+agents leave behind. It shows what is *really* reclaimable and cleans up only what is safe, with undo.
 
-Claude Code, Cursor, Codex, Copilot, Gemini CLI, Cline and friends leave worktrees, checkpoints,
-transcripts and duplicate `node_modules`, `.venv`, `target/` and `.godot/` folders all over your disk.
-`agentdisk` shows what each agent left behind, what is *really* reclaimable (shared bytes counted once),
-and gives you a cleanup that you can undo.
+## Quickstart
 
-- **Read-only by default.** `scan`, `size`, `advise` and `check` never change anything.
-- **Correct numbers.** Hardlinked files (pnpm, uv) are counted once. "Freed if deleted" only counts bytes that actually come back.
-- **Reversible cleanup.** `plan` → `apply` moves items to quarantine → `restore` or `purge`.
-- **A person decides.** `apply`, `purge` and `compact` refuse to run without a human at a terminal. The MCP server has no tool to delete anything.
-- **Every agent.** 15 agents built in; add more with a small TOML file. Windows-first, also macOS and Linux.
-- **One small binary.** Rust, no external crates.
-
-```text
-$ agentdisk scan -p ~/Projects        # example output, shortened
-
-WORKTREES (3)
-  Agent        Repo  Branch   Idle   On disk  Reclaimable  Status
-  claude-code  app   agent-b  12d   1.93 GiB     1.93 GiB  1 changed
-  claude-code  app   agent-a  15d   1.93 GiB     1.93 GiB  clean
-  cursor       game  feat-ui  21d   4.10 GiB     4.10 GiB  clean
-
-DEPENDENCY & BUILD FOLDERS (4)
-  Folder        Type    In        Idle  On disk  Reclaimable
-  .godot        godot   project   30d  6.20 GiB     6.20 GiB
-  node_modules  node    worktree  12d  1.91 GiB     1.91 GiB
-  ...
+```sh
+agentdisk scan -p ~/Projects
 ```
+
+You get three tables (agent and tool data, worktrees, dependency and build folders), a summary of
+what is reclaimable, and what each agent already cleans up by itself. Nothing on disk changes.
+
+Then, if you want space back:
+
+```sh
+agentdisk plan -p ~/Projects     # a plan; moves nothing
+agentdisk apply <plan-id>        # you type a code; items move to quarantine
+agentdisk restore <plan-id>      # changed your mind? everything goes back
+```
+
+## Why agentdisk?
+
+- **See the real cost of parallel agents.** Every agent worktree gets its own `node_modules`, `.venv`, `target/` or `.godot/`. agentdisk puts them in one table, per agent.
+- **Trust the numbers.** Hardlinked files (pnpm, uv) are counted once, and "reclaimable" only counts bytes that actually come back.
+- **Clean up without losing work.** Worktrees with uncommitted files, a `.env`, a lock from a running agent, or commits on no branch are never touched. Transcripts and memories are never planned.
+- **Undo anything.** Cleanup moves items to quarantine first; deletion is a separate, later step.
+- **Keep the human in charge.** Only a person at a terminal can apply a plan. AI agents can scan, explain and plan, nothing more.
 
 ## Install
 
-**Windows, macOS, Linux:** download the archive for your system from
-[Releases](https://github.com/laaielichter/agentdisk/releases), unpack it, and put `agentdisk`
-(`agentdisk.exe` on Windows) in a folder on your `PATH`.
-
-**With Rust installed:**
+Prebuilt binaries will be on the Releases page. Until then, build from source with
+[Rust](https://rustup.rs) 1.82 or newer:
 
 ```sh
-cargo install --git https://github.com/laaielichter/agentdisk agentdisk
+git clone https://github.com/laaielichter/agentdisk
+cd agentdisk
+cargo install --locked --path crates/agentdisk-cli
 ```
 
-Check it works: `agentdisk --version`
+On Windows you can run `.\scripts\install.ps1` instead. Check it works: `agentdisk --version`
 
-## Use
+## Commands
 
-```sh
-agentdisk scan                    # agent data and agent worktrees
-agentdisk scan -p ~/Projects      # also your repositories and build folders
-agentdisk advise -p ~/Projects    # ways to need less space
-agentdisk plan -p ~/Projects      # a cleanup plan (moves nothing)
-agentdisk apply <plan-id>         # you type a code; items move to quarantine
-agentdisk restore <plan-id>       # undo
-agentdisk purge                   # delete quarantined items older than 7 days
-agentdisk size <folder>           # measure one folder
-agentdisk check                   # quick warning when space is low (for hooks)
-agentdisk adapters                # which agents are known and found here
-```
+| Command | What it does | Changes disk? |
+|---|---|---|
+| `scan [-p dir]` | Agent and tool data, worktrees, build folders | No |
+| `explain <dir>` | What a folder is, who made it, may it be cleaned, and why | No |
+| `size <dir>` | Size, size on disk, freed if deleted | No |
+| `advise [-p dir]` | Shared stores (pnpm, uv), duplicates, caches, Docker/WSL disks, agent settings | No |
+| `check` | Fast warning when space is low or worktrees pile up (for hooks) | No |
+| `adapters` | Which agents and tools are known, and found here | No |
+| `plan [-p dir]` | Saves a cleanup plan | Writes a plan file |
+| `apply <id>` | Moves plan items to quarantine (asks you for a code) | Moves files |
+| `restore <id>` | Puts them back | Moves files |
+| `purge` | Deletes quarantined items older than 7 days (asks you) | Deletes |
+| `compact <dir>` | Windows WOF compression for read-mostly folders | Compresses |
+| `mcp` | MCP server on stdio | No |
 
-Save your projects folder once so you can drop `-p`:
-
-```sh
-agentdisk config --init           # then edit `projects = [...]` in the file it prints
-```
-
-Every read command has `--json` for scripts and agents.
+Every read command has `--json`. Save your projects folder once with `agentdisk config --init`.
 
 ## What is safe to clean
 
-| Kind | Planned for cleanup when… | Never when… |
+| Kind | Planned when… | Never when… |
 |---|---|---|
-| Agent worktrees | clean, idle 7+ days, unlocked, commits on a branch | uncommitted or untracked files, ignored files that are not build output (like `.env`), locked by a running agent, main worktree |
-| Build and dependency folders (`node_modules`, `.venv`, `target`, `.godot`, Unity `Library`, Unreal `Intermediate`, …) | marker file present (`package.json`, `Cargo.toml`, `project.godot`, …), git-ignored, idle 14+ days | tracked by git, editor running (Godot, Unity, Unreal), all files shared via hardlinks |
-| Agent logs and caches | marked `regenerable`, agent not running | — |
-| Transcripts, checkpoints, memories, settings, models | — | **always reported, never planned** |
+| Agent worktrees | clean, idle 7+ days, unlocked, commits on a branch | uncommitted or untracked files, ignored files that are not build output (like `.env`), locked, main worktree |
+| Build folders (`node_modules`, `.venv`, `target`, `.godot`, Unity `Library`, Unreal `Intermediate`, …) | marker file present, git-ignored, idle 14+ days | tracked by git, its editor is running (Godot, Unity, Unreal), all files shared via hardlinks |
+| Agent logs and caches | marked regenerable, agent not running | — |
+| Transcripts, checkpoints, memories, settings, models, SDK downloads | — | **always reported, never planned** |
 
-Branches are always kept. Items move to a quarantine folder on the same drive, so `apply` is instant
-and `restore` puts everything back. Nothing is deleted until you run `purge`.
+Branches are always kept. Quarantine sits on the same drive, so `apply` is instant.
 
-## Why not just compress?
+## Use it from your agent (MCP server)
 
-Compression gives about 1.3–2x on code and build output and almost nothing on `.git`, images,
-audio and video. The big waste is **duplication**: every agent worktree gets its own copy of the
-same dependencies. `agentdisk advise` points at shared stores (pnpm, uv), copy-on-write clones and
-the agents' own limits. For folders that are mostly read (SDKs, engine installs, old projects),
-`agentdisk compact <folder>` applies Windows WOF compression.
+`agentdisk mcp` offers read-only tools (`agentdisk_scan`, `agentdisk_explain`, `agentdisk_size`,
+`agentdisk_advise`, `agentdisk_check`, `agentdisk_quarantine`) plus `agentdisk_plan`. There is no
+tool to move or delete files.
 
-## Use it from your agent
-
-`agentdisk mcp` runs an MCP server on stdio with read-only tools plus `agentdisk_plan`.
-
-**Claude Code plugin** (MCP server, skill, and a disk check at session start):
+**Claude Code plugin** (MCP server + skill + a disk check when a session starts):
 
 ```
 /plugin marketplace add laaielichter/agentdisk
 /plugin install agentdisk@agentdisk
 ```
 
-Cursor, Codex, Copilot, Gemini CLI, Cline, Windsurf and others: see [docs/clients.md](docs/clients.md).
+**Cursor, Codex, GitHub Copilot, Gemini CLI, Cline, Windsurf, Kiro, Zed, OpenCode:** see
+[docs/clients.md](docs/clients.md).
 
-## Supported agents
+## Supported agents and tools
 
 Claude Code · Cursor · OpenAI Codex · GitHub Copilot · Gemini CLI · Cline · Roo Code · Windsurf ·
-Kiro · OpenCode · Amp · Aider · Zed · pi · Ollama models
+Kiro · OpenCode · Amp · Aider · Zed · pi · Ollama · LM Studio · Hugging Face cache · Godot editor
 
-Locations marked "undocumented" come from user reports and are reported only. Agents move their
-data often; `agentdisk adapters` shows what was found on your machine. Missing an agent or a
-path? [Add an adapter](docs/adapters.md) — it is a small TOML file.
+Each one is a small TOML file. Missing one, or a path changed? [Add an adapter](docs/adapters.md).
+
+## How it compares
+
+| | agentdisk | Disk analyzers (WizTree, dua, WinDirStat) | Build cleaners (kondo, npkill) | Agents' own cleanup |
+|---|---|---|---|---|
+| Knows which agent made a folder | Yes, 18 agents and tools | No | No | Only its own |
+| Knows what is safe to delete | Yes, with git checks | No | Build folders only | Its own data |
+| Counts hardlinked bytes once | Yes | Some do | No | — |
+| Undo | Quarantine + restore | No | No | Varies |
+| Usable by AI agents | MCP server (read-only + plan) | No | No | — |
+| What it does not do | No GUI; does not count copy-on-write clones as shared yet | | | |
+
+## Why not just compress?
+
+Compression gives about 1.3–2x on code and build output and almost nothing on `.git`, images,
+audio and video. The big waste is duplication. `agentdisk advise` points at shared stores,
+copy-on-write clones and the agents' own limits; `agentdisk compact` handles read-mostly folders on Windows.
+
+## FAQ
+
+**Will it delete my work?** Not by itself. Scans never write. A plan moves nothing. `apply` needs you
+to type a code and only moves items to quarantine. Only `purge` deletes, and it asks too.
+
+**Can my AI agent clean up for me?** It can make a plan and show you the command. Applying it is yours.
+
+**Does it send data anywhere?** No. It runs locally and has no network code.
+
+**Why is something "undocumented"?** Some agents do not document where they store data. Those paths
+come from user reports and are reported only.
 
 ## Known limits
 
-- Copy-on-write clones (ReFS block cloning, APFS clones, Btrfs reflinks) are still counted as separate space.
+- Copy-on-write clones (ReFS block cloning, APFS clones, Btrfs reflinks) still count as separate space.
 - "In use" detection: Windows refuses to move open folders; Linux checks open files; macOS relies on idle time and editor detection.
-- Several agent storage paths are undocumented and may change between versions.
+- Agent storage paths change between versions; `agentdisk adapters` shows what was found on your machine.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Adapters for more agents are the most welcome help.
+Adapters for more agents are the most welcome help. See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/adapters.md](docs/adapters.md). Changes per version: [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

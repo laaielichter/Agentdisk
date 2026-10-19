@@ -1,0 +1,31 @@
+name: Add or fix an agent adapter
+description: An agent or tool stores data somewhere agentdisk does not know
+labels: ["enhancement"]
+body:
+  - type: input
+    id: agent
+    attributes:
+      label: Agent or tool, and version
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: textarea
+    id: folders
+    attributes:
+      label: Folders it uses, and what is inside each
+      description: Use ~ or %USERPROFILE% instead of your real user name.
+    validations:
+      required: true
+  - type: textarea
+    id: cleanup
+    attributes:
+      label: Does it clean these up itself? Is there a setting or command?
+  - type: input
+    id: source
+    attributes:
+      label: Source (docs link, or how you found it)

@@ -377,9 +377,9 @@ pub fn render(r: &Report) -> String {
     let mut out = format!("agentdisk scan — {}\n", util::datetime(now));
     out.push_str("Read-only. Nothing was changed.\n\n");
 
-    out.push_str("AGENT DATA\n");
+    out.push_str("AGENT & TOOL DATA\n");
     if r.agents.is_empty() {
-        out.push_str("  No agent data found.\n");
+        out.push_str("  No agent or tool data found.\n");
     } else {
         let mut rows: Vec<&AgentItem> = r.agents.iter().collect();
         rows.sort_by_key(|x| std::cmp::Reverse(x.totals.allocated_bytes));

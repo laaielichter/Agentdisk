@@ -164,3 +164,49 @@ fn adapters_and_check() {
     agentdisk_core::json::parse(out.trim()).unwrap();
     fs::remove_dir_all(&h).unwrap();
 }
+
+#[test]
+fn explain_command() {
+    let h = tmp("explain");
+    let web = h.join("web");
+    fs::create_dir_all(web.join("node_modules/a")).unwrap();
+    fs::write(web.join("package.json"), "{}").unwrap();
+    fs::create_dir_all(h.join(".claude/projects/p")).unwrap();
+    let (code, out, err) = run(
+        &h,
+        &[
+            "explain",
+            web.join("node_modules").to_str().unwrap(),
+            "--json",
+        ],
+    );
+    assert_eq!(code, 0, "{err}");
+    let v = agentdisk_core::json::parse(out.trim()).unwrap();
+    assert_eq!(v.get("verdict").unwrap().as_str(), Some("keep")); // changed today
+    let (code, out, _) = run(
+        &h,
+        &["explain", h.join(".claude/projects").to_str().unwrap()],
+    );
+    assert_eq!(code, 0);
+    assert!(out.contains("Claude Code") && out.contains("keep"), "{out}");
+    let (code, _, _) = run(&h, &["explain", h.join("nope").to_str().unwrap()]);
+    assert_eq!(code, 2);
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
+fn manifest_versions_match_cargo() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for f in [
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        "gemini-extension.json",
+    ] {
+        let text = fs::read_to_string(root.join(f)).unwrap();
+        let needle = format!("\"version\": \"{}\"", env!("CARGO_PKG_VERSION"));
+        assert!(text.contains(&needle), "{f} must contain {needle}");
+        agentdisk_core::json::parse(&text).unwrap();
+    }
+    let changelog = fs::read_to_string(root.join("CHANGELOG.md")).unwrap();
+    assert!(changelog.contains(&format!("## {}", env!("CARGO_PKG_VERSION"))));
+}

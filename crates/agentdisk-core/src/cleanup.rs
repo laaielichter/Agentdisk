@@ -355,9 +355,8 @@ pub fn make_plan(report: &Report, opts: &PlanOptions) -> Plan {
         {
             let label = format!("{} {}", a.agent, a.what);
             let adapter = report.adapters.iter().find(|x| x.id == a.adapter);
-            let running = adapter.is_some_and(|ad| {
-                ad.processes.iter().any(|p| process_matches(&procs, p))
-            });
+            let running =
+                adapter.is_some_and(|ad| ad.processes.iter().any(|p| process_matches(&procs, p)));
             let idle = a.totals.idle_days(now).unwrap_or(0);
             let reason = if running {
                 Err(format!("{} is running", a.agent))

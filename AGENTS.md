@@ -6,6 +6,7 @@ agentdisk reports disk space used by AI coding agents and dev projects, and make
 
 - `agentdisk check` — fast: free space and number of agent worktrees. Run before big work.
 - `agentdisk scan -p <projects-folder> [--json]` — full read-only report.
+- `agentdisk explain <dir> [--json]` — what a folder is, who made it, and whether a plan would clean it.
 - `agentdisk size <dir> [--json]` — one folder; "freed if deleted" counts hardlinks correctly.
 - `agentdisk advise -p <dir>` — ways to need less space (pnpm/uv, duplicates, caches, agent settings).
 - `agentdisk plan -p <dir>` — saves a cleanup plan. Moves nothing.
@@ -19,6 +20,6 @@ agentdisk reports disk space used by AI coding agents and dev projects, and make
 
 ## Working on this repo
 
-- Rust workspace, no external crates. `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --all --check` must pass.
+- Rust workspace, no external crates. `./scripts/check.sh` (or `.\scripts\check.ps1` on Windows) runs fmt, clippy, tests and a smoke test; all must pass.
 - Agent knowledge lives in `crates/agentdisk-core/adapters/*.toml`. To support a new agent, add a file there and to the `BUILTIN` list in `adapters.rs`.
 - Scanning must never write. Cleanup must stay plan → quarantine → purge.

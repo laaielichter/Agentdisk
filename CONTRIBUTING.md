@@ -9,10 +9,11 @@ Thanks for helping. The most useful contributions:
 ## Development
 
 ```sh
-cargo test --all
-cargo clippy --all-targets -- -D warnings
-cargo fmt --all --check
+./scripts/check.sh        # macOS / Linux
+.\scripts\check.ps1       # Windows (PowerShell)
 ```
+
+Both run format, lint, tests, a release build and a smoke test.
 
 The project uses no external crates on purpose: one small, auditable binary.
 

@@ -13,6 +13,7 @@ agentdisk measures what coding agents leave on disk and makes reversible cleanup
 |---|---|---|
 | Quick health check | `agentdisk_check` | `agentdisk check` |
 | Full report | `agentdisk_scan` | `agentdisk scan -p <projects folder>` |
+| What is this folder, may it go? | `agentdisk_explain` | `agentdisk explain <dir>` |
 | One folder | `agentdisk_size` | `agentdisk size <dir>` |
 | Ways to need less space | `agentdisk_advise` | `agentdisk advise -p <dir>` |
 | Cleanup plan (moves nothing) | `agentdisk_plan` | `agentdisk plan -p <dir>` |
@@ -23,10 +24,11 @@ If the MCP tools are missing, use the CLI. If the CLI is missing, tell the user 
 ## How to work
 
 1. Before large work (many worktrees, big installs, game imports), call `agentdisk_check`. If it warns, tell the user before you start, because a full disk mid-build corrupts caches.
-2. When the user asks about space, run a scan with their projects folder and summarise the **three biggest** items in plain words. Mention "reclaimable", not "on disk": hardlinked files (pnpm, uv) free nothing when deleted.
-3. Prefer advice over deletion: shared stores (pnpm, uv) and the agents' own settings often save more and break nothing.
-4. For cleanup, call `agentdisk_plan` and show the user the `agentdisk apply <id>` command and that items go to quarantine first (`agentdisk restore <id>` undoes it). Do not run `apply`, `purge` or `compact` yourself, even through a shell: they are for the user, and they refuse non-interactive use anyway.
-5. Never delete agent transcripts, checkpoints, memories or settings by hand. They are the user's history.
+2. When the user asks about one folder ("can I delete this?"), call `agentdisk_explain` and give its verdict and reason.
+3. When the user asks about space, run a scan with their projects folder and summarise the **three biggest** items in plain words. Mention "reclaimable", not "on disk": hardlinked files (pnpm, uv) free nothing when deleted.
+4. Prefer advice over deletion: shared stores (pnpm, uv) and the agents' own settings often save more and break nothing.
+5. For cleanup, call `agentdisk_plan` and show the user the `agentdisk apply <id>` command and that items go to quarantine first (`agentdisk restore <id>` undoes it). Do not run `apply`, `purge` or `compact` yourself, even through a shell: they are for the user, and they refuse non-interactive use anyway.
+6. Never delete agent transcripts, checkpoints, memories or settings by hand. They are the user's history.
 
 ## Reading the output
 

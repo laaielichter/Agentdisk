@@ -41,7 +41,9 @@ fn inside(child: &str, parent: &str) -> bool {
 
 /// Nearest ancestor (or self) with a `.git` *file* = linked worktree root.
 fn worktree_root(p: &Path) -> Option<PathBuf> {
-    p.ancestors().find(|a| a.join(".git").is_file()).map(Path::to_path_buf)
+    p.ancestors()
+        .find(|a| a.join(".git").is_file())
+        .map(Path::to_path_buf)
 }
 
 pub fn explain(path: &Path) -> Result<Explanation, String> {
@@ -50,7 +52,10 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
         return Ok(Explanation {
             path: path.to_path_buf(),
             totals: Totals::default(),
-            facts: vec!["This is a link (symlink or junction). agentdisk never follows or removes links.".into()],
+            facts: vec![
+                "This is a link (symlink or junction). agentdisk never follows or removes links."
+                    .into(),
+            ],
             owner: None,
             class: None,
             verdict: Verdict::Keep("links are never touched".into()),
@@ -69,9 +74,18 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
 
     // 1. Agent and tool data (most specific match wins).
     let (adapters, _) = scan::load_adapters(&cfg.adapters);
-    let mut best: Option<(usize, &crate::adapters::Adapter, &crate::adapters::PathEntry, PathBuf)> = None;
+    let mut best: Option<(
+        usize,
+        &crate::adapters::Adapter,
+        &crate::adapters::PathEntry,
+        PathBuf,
+    )> = None;
     for a in &adapters {
-        for e in a.paths.iter().filter(|e| e.applies_here() && e.kind == Kind::Dir) {
+        for e in a
+            .paths
+            .iter()
+            .filter(|e| e.applies_here() && e.kind == Kind::Dir)
+        {
             for root in paths::expand(&e.template) {
                 let rk = key(&root);
                 if inside(&k, &rk) && best.as_ref().is_none_or(|b| rk.len() > b.0) {
@@ -87,8 +101,15 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
             if exact { "This is the" } else { "Inside the" },
             e.id,
             a.name,
-            if e.documented { "" } else { " (undocumented location)" },
-            e.note.as_ref().map(|n| format!(". {n}")).unwrap_or_default()
+            if e.documented {
+                ""
+            } else {
+                " (undocumented location)"
+            },
+            e.note
+                .as_ref()
+                .map(|n| format!(". {n}"))
+                .unwrap_or_default()
         ));
         if let Some(pol) = &a.policy {
             facts.push(format!("{} cleans up by itself: {pol}", a.name));
@@ -99,19 +120,35 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
         owner = Some(a.id.clone());
         class = Some(e.class);
         verdict = match e.class {
-            Class::UserData => Verdict::Keep("user data (history or work); agentdisk never plans it".into()),
-            Class::Protected => Verdict::Keep("settings, memories or extensions; never touched".into()),
-            Class::Model => Verdict::Keep("large download (models); remove it with the tool itself".into()),
-            Class::Download => Verdict::Keep("re-downloadable tool files; remove old versions in the tool itself".into()),
-            Class::Regenerable if !exact => {
-                Verdict::Keep(format!("part of a regenerable folder; clean {} as a whole", display(root)))
+            Class::UserData => {
+                Verdict::Keep("user data (history or work); agentdisk never plans it".into())
             }
+            Class::Protected => {
+                Verdict::Keep("settings, memories or extensions; never touched".into())
+            }
+            Class::Model => {
+                Verdict::Keep("large download (models); remove it with the tool itself".into())
+            }
+            Class::Download => Verdict::Keep(
+                "re-downloadable tool files; remove old versions in the tool itself".into(),
+            ),
+            Class::Regenerable if !exact => Verdict::Keep(format!(
+                "part of a regenerable folder; clean {} as a whole",
+                display(root)
+            )),
             Class::Regenerable => {
                 let idle = totals.idle_days(now).unwrap_or(0);
-                if a.processes.iter().any(|n| cleanup::process_matches(&procs, n)) {
+                if a.processes
+                    .iter()
+                    .any(|n| cleanup::process_matches(&procs, n))
+                {
                     Verdict::Keep(format!("{} is running", a.name))
                 } else if idle < cfg.worktree_days {
-                    Verdict::Keep(format!("changed {} — needs {}+ days idle", util::age(Some(idle)), cfg.worktree_days))
+                    Verdict::Keep(format!(
+                        "changed {} — needs {}+ days idle",
+                        util::age(Some(idle)),
+                        cfg.worktree_days
+                    ))
                 } else {
                     Verdict::Cleanable(format!("regenerable, idle {}", util::age(Some(idle))))
                 }
@@ -135,9 +172,9 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
         if key(&wt) == k {
             facts.push(format!("This is a git worktree made by {agent}."));
             owner.get_or_insert(agent.clone());
-            let listed = repo.as_ref().and_then(|r| {
-                git::worktrees(r).into_iter().find(|w| key(&w.path) == k)
-            });
+            let listed = repo
+                .as_ref()
+                .and_then(|r| git::worktrees(r).into_iter().find(|w| key(&w.path) == k));
             verdict = match (repo, listed) {
                 (Some(r), Some(w)) => {
                     facts.push(format!("Repository: {}", display(&r)));
@@ -165,7 +202,10 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
                 _ => Verdict::Keep("its repository was not found; check it by hand".into()),
             };
         } else {
-            facts.push(format!("Inside the git worktree {} (made by {agent}).", display(&wt)));
+            facts.push(format!(
+                "Inside the git worktree {} (made by {agent}).",
+                display(&wt)
+            ));
         }
     }
 
@@ -187,7 +227,11 @@ pub fn explain(path: &Path) -> Result<Explanation, String> {
             Ok(r) => Verdict::Cleanable(r),
             Err(r) => Verdict::Keep(r),
         };
-    } else if let Some(anc) = p.ancestors().skip(1).find(|a| projects::rule_for(a).is_some()) {
+    } else if let Some(anc) = p
+        .ancestors()
+        .skip(1)
+        .find(|a| projects::rule_for(a).is_some())
+    {
         facts.push(format!(
             "Inside the build folder {}. Clean that folder as a whole, not parts of it.",
             display(anc)
@@ -249,7 +293,14 @@ pub fn to_json(e: &Explanation) -> Value {
         ("class", e.class.map(|c| c.as_str()).into()),
         ("verdict", v.into()),
         ("reason", reason.into()),
-        ("facts", e.facts.iter().map(|f| Value::from(f.as_str())).collect::<Vec<_>>().into()),
+        (
+            "facts",
+            e.facts
+                .iter()
+                .map(|f| Value::from(f.as_str()))
+                .collect::<Vec<_>>()
+                .into(),
+        ),
         ("allocated_bytes", e.totals.allocated_bytes.into()),
         ("reclaimable_bytes", e.totals.reclaimable_bytes.into()),
         ("newest_mtime", e.totals.newest_mtime.into()),
@@ -270,9 +321,16 @@ mod tests {
         fs::write(root.join("web/node_modules/a/x.js"), vec![1u8; 5000]).unwrap();
         let e = explain(&root.join("web/node_modules")).unwrap();
         assert!(e.facts.iter().any(|f| f.contains("node_modules")));
-        assert!(matches!(e.verdict, Verdict::Keep(_)), "fresh folder is kept: {:?}", e.verdict);
+        assert!(
+            matches!(e.verdict, Verdict::Keep(_)),
+            "fresh folder is kept: {:?}",
+            e.verdict
+        );
         let inner = explain(&root.join("web/node_modules/a")).unwrap();
-        assert!(inner.facts.iter().any(|f| f.contains("Inside the build folder")));
+        assert!(inner
+            .facts
+            .iter()
+            .any(|f| f.contains("Inside the build folder")));
         let unknown = explain(&root.join("web")).unwrap();
         assert_eq!(unknown.verdict, Verdict::Unknown);
         assert!(explain(&root.join("missing")).is_err());

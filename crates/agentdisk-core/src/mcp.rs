@@ -9,6 +9,7 @@ use crate::advise;
 use crate::check;
 use crate::cleanup::{self, PlanOptions};
 use crate::config;
+use crate::explain;
 use crate::json::{self, Value};
 use crate::scan::{self, ScanOptions};
 use crate::size::{self, human};
@@ -74,6 +75,13 @@ pub fn tools() -> Value {
             "agentdisk_size",
             "Measure a folder",
             "Measure one folder: logical size, size on disk, and how much deleting it would really free (hardlinks counted once). Read-only.",
+            vec![("path", Value::obj(vec![("type", "string".into())]))],
+            true,
+        ),
+        tool(
+            "agentdisk_explain",
+            "Explain a folder",
+            "Say what a folder is (agent data, git worktree, build folder), which agent or tool made it, and whether a cleanup plan would include it and why. Read-only.",
             vec![("path", Value::obj(vec![("type", "string".into())]))],
             true,
         ),
@@ -155,6 +163,13 @@ pub fn call(name: &str, args: &Value) -> Result<String, String> {
                 human(t.allocated_bytes),
                 human(t.reclaimable_bytes)
             ))
+        }
+        "agentdisk_explain" => {
+            let p = args
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or("missing 'path'")?;
+            explain::explain(std::path::Path::new(p)).map(|e| explain::render(&e))
         }
         "agentdisk_advise" => {
             let r = scan::run(&scan_opts(args));

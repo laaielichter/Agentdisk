@@ -109,16 +109,36 @@ fn known_caches() -> Vec<Cache> {
 
 /// Docker Desktop and WSL virtual disk files that exist on this machine.
 pub fn virtual_disks() -> Vec<(PathBuf, u64)> {
+    find_virtual_disks(&paths::localappdata(), &paths::home(), std::env::consts::OS)
+}
+
+fn find_virtual_disks(
+    local: &std::path::Path,
+    home: &std::path::Path,
+    os: &str,
+) -> Vec<(PathBuf, u64)> {
     let mut found: Vec<PathBuf> = Vec::new();
-    let local = paths::localappdata();
-    if cfg!(windows) {
-        for rel in ["Docker/wsl/disk/docker_data.vhdx", "Docker/wsl/data/ext4.vhdx", "Docker/wsl/main/ext4.vhdx"] {
+    if os == "windows" {
+        for rel in [
+            "Docker/wsl/disk/docker_data.vhdx",
+            "Docker/wsl/data/ext4.vhdx",
+            "Docker/wsl/main/ext4.vhdx",
+        ] {
             found.push(local.join(rel));
         }
-        found.extend(paths::expand(&format!("{}/Packages/*/LocalState", paths::slashed(&local))).into_iter().map(|p| p.join("ext4.vhdx")));
-        found.extend(paths::expand(&format!("{}/wsl/*", paths::slashed(&local))).into_iter().map(|p| p.join("ext4.vhdx")));
-    } else if cfg!(target_os = "macos") {
-        found.push(paths::home().join("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw"));
+        let base = paths::slashed(local);
+        found.extend(
+            paths::expand(&format!("{base}/Packages/*/LocalState"))
+                .into_iter()
+                .map(|p| p.join("ext4.vhdx")),
+        );
+        found.extend(
+            paths::expand(&format!("{base}/wsl/*"))
+                .into_iter()
+                .map(|p| p.join("ext4.vhdx")),
+        );
+    } else if os == "macos" {
+        found.push(home.join("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw"));
     }
     found
         .into_iter()
@@ -335,15 +355,24 @@ pub fn advise(r: &Report) -> Vec<Advice> {
     let disks = virtual_disks();
     let disk_total: u64 = disks.iter().map(|d| d.1).sum();
     if disk_total >= 5 * 1024 * 1024 * 1024 {
-        let list: Vec<String> = disks.iter().map(|(p, b)| format!("{} ({})", display(p), human(*b))).collect();
+        let list: Vec<String> = disks
+            .iter()
+            .map(|(p, b)| format!("{} ({})", display(p), human(*b)))
+            .collect();
         let mut commands = vec![
             "docker system df            # what Docker itself is using".to_string(),
             "docker builder prune        # build cache; safe, rebuilds on demand".to_string(),
         ];
         if cfg!(windows) {
             commands.push("wsl --shutdown".into());
-            commands.push("wsl --manage <distro> --set-sparse true   # newer WSL: disk shrinks by itself".into());
-            commands.push("Optimize-VHD -Path <file.vhdx> -Mode Full # needs the Hyper-V PowerShell module".into());
+            commands.push(
+                "wsl --manage <distro> --set-sparse true   # newer WSL: disk shrinks by itself"
+                    .into(),
+            );
+            commands.push(
+                "Optimize-VHD -Path <file.vhdx> -Mode Full # needs the Hyper-V PowerShell module"
+                    .into(),
+            );
         }
         out.push(Advice {
             title: format!("Virtual disks use {}", human(disk_total)),
@@ -432,4 +461,38 @@ pub fn to_json(list: &[Advice]) -> Value {
             })
             .collect(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::temp_dir;
+    use std::fs;
+
+    #[test]
+    fn finds_virtual_disks_per_os() {
+        let root = temp_dir("vdisk");
+        let local = root.join("AppData/Local");
+        fs::create_dir_all(local.join("Docker/wsl/disk")).unwrap();
+        fs::write(
+            local.join("Docker/wsl/disk/docker_data.vhdx"),
+            vec![0u8; 4096],
+        )
+        .unwrap();
+        fs::create_dir_all(local.join("Packages/Ubuntu/LocalState")).unwrap();
+        fs::write(
+            local.join("Packages/Ubuntu/LocalState/ext4.vhdx"),
+            vec![1u8; 4096],
+        )
+        .unwrap();
+        fs::create_dir_all(local.join("Packages/SomeApp/LocalState")).unwrap();
+        let mac = root.join("Library/Containers/com.docker.docker/Data/vms/0/data");
+        fs::create_dir_all(&mac).unwrap();
+        fs::write(mac.join("Docker.raw"), vec![2u8; 4096]).unwrap();
+
+        assert_eq!(find_virtual_disks(&local, &root, "windows").len(), 2);
+        assert_eq!(find_virtual_disks(&local, &root, "macos").len(), 1);
+        assert!(find_virtual_disks(&local, &root, "linux").is_empty());
+        fs::remove_dir_all(&root).unwrap();
+    }
 }

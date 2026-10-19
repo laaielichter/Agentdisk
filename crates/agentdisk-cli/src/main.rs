@@ -4,7 +4,7 @@ use agentdisk_core::cleanup::{self, PlanOptions};
 use agentdisk_core::paths::display;
 use agentdisk_core::scan::{self, ScanOptions};
 use agentdisk_core::size::{self, human};
-use agentdisk_core::{adapters, advise, check, compact, config, mcp, VERSION};
+use agentdisk_core::{adapters, advise, check, compact, config, explain, mcp, VERSION};
 use std::collections::HashMap;
 use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -19,6 +19,7 @@ USAGE:
 LOOK (read-only):
     scan        What every agent left on disk (agent data, worktrees, build folders)
     size <dir>  Measure one folder (size, on disk, freed if deleted)
+    explain <dir>  What is this folder, who made it, may it be cleaned?
     advise      Ways to need less space (shared stores, duplicates, caches)
     check       Fast check of free space and agent worktrees (for hooks)
     adapters    List the agents agentdisk knows and where they keep data
@@ -169,6 +170,27 @@ fn cmd_scan(rest: &[String]) -> Result<ExitCode, String> {
         println!("{}", scan::to_json(&r).pretty());
     } else {
         print!("{}", scan::render(&r));
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn cmd_explain(rest: &[String]) -> Result<ExitCode, String> {
+    let a = parse(rest, &[], &["json"])?;
+    if a.has("help") || a.pos.is_empty() {
+        println!("agentdisk explain <dir> [--json]\n\nRead-only. Says what a folder is (agent data, worktree, build folder),\nwho made it, and whether `agentdisk plan` would clean it, and why.");
+        return Ok(if a.pos.is_empty() && !a.has("help") {
+            ExitCode::from(2)
+        } else {
+            ExitCode::SUCCESS
+        });
+    }
+    for p in &a.pos {
+        let e = explain::explain(Path::new(p))?;
+        if a.has("json") {
+            println!("{}", explain::to_json(&e));
+        } else {
+            print!("{}", explain::render(&e));
+        }
     }
     Ok(ExitCode::SUCCESS)
 }
@@ -538,7 +560,7 @@ fn cmd_adapters(rest: &[String]) -> Result<ExitCode, String> {
             ad.vendor,
             ad.verified.as_deref().unwrap_or("unverified")
         );
-        for p in &ad.paths {
+        for p in ad.paths.iter().filter(|p| p.applies_here()) {
             let here = found.iter().any(|f| f.id == p.id);
             println!(
                 "    {} {:<20} {:<12} {}{}",
@@ -614,6 +636,7 @@ fn run(args: &[String]) -> Result<ExitCode, String> {
         }
         "scan" => cmd_scan(rest),
         "size" => cmd_size(rest),
+        "explain" => cmd_explain(rest),
         "advise" => cmd_advise(rest),
         "plan" => cmd_plan(rest),
         "apply" => cmd_apply(rest),
