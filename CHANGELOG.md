@@ -2,6 +2,8 @@
 
 ## 0.3.1
 
+- `quarantine --json` now provides stable machine-readable quarantine information.
+
 ### Security
 
 - `apply` checks agent caches again right before moving them, as it already did for worktrees and build folders. A cache is skipped when its agent is running, when a program uses the folder, or when it is no longer a plain folder that its adapter lists as regenerable. Before, these checks ran only when the plan was made.
@@ -18,6 +20,10 @@
 - Model and download folders never get compression advice (weights barely compress).
 - Fixes for lints from newer clippy versions.
 - Consistent path separators in virtual disk advice on Windows.
+
+## 0.3.1
+
+- `quarantine --json` now provides stable machine-readable quarantine information.
 
 ## 0.2.0
 
