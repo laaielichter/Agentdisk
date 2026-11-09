@@ -452,6 +452,22 @@ fn cmd_purge(rest: &[String]) -> Result<ExitCode, String> {
     Ok(status(!problems.is_empty() || !refused.is_empty()))
 }
 
+fn cmd_quarantine(rest: &[String]) -> Result<ExitCode, String> {
+    let a = parse(rest, &[], &["json"])?;
+    if a.has("help") {
+        println!(
+            "agentdisk quarantine [--json]\n\nShows items currently in quarantine. Read-only."
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    if a.has("json") {
+        println!("{}", cleanup::quarantine_to_json().pretty());
+    } else {
+        print!("{}", cleanup::render_quarantine());
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn cmd_compact(rest: &[String]) -> Result<ExitCode, String> {
     let a = parse(rest, &["algo"], &["undo", "dry-run"])?;
     if a.has("help") || a.pos.is_empty() {
@@ -657,10 +673,7 @@ fn run(args: &[String]) -> Result<ExitCode, String> {
         "apply" => cmd_apply(rest),
         "restore" => cmd_restore(rest),
         "purge" => cmd_purge(rest),
-        "quarantine" => {
-            print!("{}", cleanup::render_quarantine());
-            Ok(ExitCode::SUCCESS)
-        }
+        "quarantine" => cmd_quarantine(rest),
         "compact" => cmd_compact(rest),
         "check" => cmd_check(rest),
         "adapters" => cmd_adapters(rest),
