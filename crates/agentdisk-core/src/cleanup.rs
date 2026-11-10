@@ -1013,6 +1013,31 @@ pub fn restore(plan_id: &str) -> (Vec<JournalEntry>, Vec<String>) {
     (done, problems)
 }
 
+/// Return the quarantine journal as stable machine-readable JSON.
+pub fn quarantine_to_json() -> Value {
+    let items = quarantined_plans()
+        .iter()
+        .flat_map(|id| {
+            read_journal(id).into_iter().map(move |e| {
+                Value::obj(vec![
+                    ("plan", id.as_str().into()),
+                    ("state", e.state.into()),
+                    ("kind", e.kind.as_str().into()),
+                    ("original", display(&e.original).into()),
+                    ("quarantine", display(&e.quarantine).into()),
+                    ("bytes", e.bytes.into()),
+                    ("moved_at", e.moved_at.into()),
+                ])
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Value::obj(vec![
+        ("schema_version", 1u64.into()),
+        ("items", items.into()),
+    ])
+}
+
 /// (entries `purge` may delete with their plan id, entries left out and why).
 pub type PurgeList = (Vec<(String, JournalEntry)>, Vec<String>);
 
