@@ -1,30 +1,22 @@
 # Changelog
 
-## 0.3.1
+## Unreleased
 
 - `quarantine --json` now provides stable machine-readable quarantine information.
 
-### Security
+## 0.3.1
 
+### Security
 - `apply` checks agent caches again right before moving them, as it already did for worktrees and build folders. A cache is skipped when its agent is running, when a program uses the folder, or when it is no longer a plain folder that its adapter lists as regenerable. Before, these checks ran only when the plan was made.
 - `restore` and `purge` accept only real plan ids, and only touch entries inside that plan's quarantine folder. Any other path in a quarantine journal is left alone and reported. The `purge` confirmation now lists the quarantine paths it will delete.
-
 ## 0.3.0
-
 - New adapter: ReversePort. Its tool output, lookup cache, extracted files and reports are regenerable; port plans, blueprints, dossiers and scenes are user data; proof cases, feedback and the engine's state are never touched. Honors `REVERSEPORT_HOME`.
 - Releases with binaries for Windows, macOS and Linux are made automatically when a new version in `Cargo.toml` reaches `main` (or when a version tag is pushed); the README points to the downloads.
-
 ## 0.2.1
-
 - `advise` now explains big agent history and model folders (1 GB and up): how much is already compressed, whether `agentdisk compact` can help, the tool's own cleanup command, and which environment variable moves the folder to another drive.
 - Model and download folders never get compression advice (weights barely compress).
 - Fixes for lints from newer clippy versions.
 - Consistent path separators in virtual disk advice on Windows.
-
-## 0.3.1
-
-- `quarantine --json` now provides stable machine-readable quarantine information.
-
 ## 0.2.0
 
 - New: `agentdisk explain <dir>` (and MCP tool `agentdisk_explain`) says what a folder is, which agent or tool made it, and whether a cleanup plan would include it, and why.
