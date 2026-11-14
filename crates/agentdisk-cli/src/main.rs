@@ -1,6 +1,7 @@
 //! agentdisk command line.
 
 use agentdisk_core::cleanup::{self, PlanOptions};
+use agentdisk_core::json::Value;
 use agentdisk_core::paths::display;
 use agentdisk_core::scan::{self, ScanOptions};
 use agentdisk_core::size::{self, human};
@@ -178,28 +179,66 @@ fn cmd_scan(rest: &[String]) -> Result<ExitCode, String> {
 fn cmd_explain(rest: &[String]) -> Result<ExitCode, String> {
     let a = parse(rest, &[], &["json"])?;
     if a.has("help") || a.pos.is_empty() {
-        println!("agentdisk explain <dir> [--json]\n\nRead-only. Says what a folder is (agent data, worktree, build folder),\nwho made it, and whether `agentdisk plan` would clean it, and why.");
+        println!("agentdisk explain <dir>... [--json]\n\nRead-only. Says what a folder is (agent data, worktree, build folder),\nwho made it, and whether `agentdisk plan` would clean it, and why.\n\nSeveral folders: --json prints one array in the order given. A folder that\ncannot be read is reported ({{\"path\", \"error\"}} in JSON, stderr in text), the\nrest still run, and the exit code is 1.");
         return Ok(if a.pos.is_empty() && !a.has("help") {
             ExitCode::from(2)
         } else {
             ExitCode::SUCCESS
         });
     }
-    for p in &a.pos {
+    each_folder(&a, |p| {
         let e = explain::explain(Path::new(p))?;
-        if a.has("json") {
-            println!("{}", explain::to_json(&e));
+        Ok((explain::to_json(&e), explain::render(&e)))
+    })
+}
+
+/// Run `one` (JSON and text output for a folder) over every folder given.
+/// One folder: its output as before, and an error ends the run (exit 2).
+/// Several: `--json` prints one array in the order given; a folder that
+/// fails becomes `{"path", "error"}` (text: an error on stderr) and the
+/// rest still run, then the exit code is 1.
+fn each_folder(
+    a: &Args,
+    one: impl Fn(&str) -> Result<(Value, String), String>,
+) -> Result<ExitCode, String> {
+    let json = a.has("json");
+    if let [p] = a.pos.as_slice() {
+        let (v, text) = one(p)?;
+        if json {
+            println!("{v}");
         } else {
-            print!("{}", explain::render(&e));
+            print!("{text}");
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
+    let (mut all, mut failed) = (Vec::new(), false);
+    for p in &a.pos {
+        match one(p) {
+            Ok((v, _)) if json => all.push(v),
+            Ok((_, text)) => print!("{text}"),
+            Err(e) => {
+                failed = true;
+                if json {
+                    all.push(Value::obj(vec![
+                        ("path", p.as_str().into()),
+                        ("error", e.into()),
+                    ]));
+                } else {
+                    eprintln!("error: {e}");
+                }
+            }
         }
     }
-    Ok(ExitCode::SUCCESS)
+    if json {
+        println!("{}", Value::Arr(all));
+    }
+    Ok(ExitCode::from(failed as u8))
 }
 
 fn cmd_size(rest: &[String]) -> Result<ExitCode, String> {
     let a = parse(rest, &["threads"], &["json"])?;
     if a.has("help") || a.pos.is_empty() {
-        println!("agentdisk size <dir> [--json] [--threads N]\n\nMeasure one folder. Read-only. Symlinks and junctions are not followed;\nhardlinked files are counted once.");
+        println!("agentdisk size <dir>... [--json] [--threads N]\n\nMeasure folders. Read-only. Symlinks and junctions are not followed;\nhardlinked files are counted once.\n\nSeveral folders: --json prints one array in the order given. A folder that\ncannot be read is reported ({{\"path\", \"error\"}} in JSON, stderr in text), the\nrest still run, and the exit code is 1.");
         return Ok(if a.pos.is_empty() && !a.has("help") {
             ExitCode::from(2)
         } else {
@@ -210,49 +249,42 @@ fn cmd_size(rest: &[String]) -> Result<ExitCode, String> {
         .num("threads")?
         .map(|n| n.max(1) as usize)
         .unwrap_or_else(size::default_threads);
-    for p in &a.pos {
+    each_folder(&a, |p| {
         let t = size::measure(Path::new(p), threads).map_err(|e| format!("{p}: {e}"))?;
-        if a.has("json") {
-            let v = agentdisk_core::json::Value::obj(vec![
-                ("path", p.as_str().into()),
-                ("files", t.files.into()),
-                ("dirs", t.dirs.into()),
-                ("logical_bytes", t.logical_bytes.into()),
-                ("allocated_bytes", t.allocated_bytes.into()),
-                ("reclaimable_bytes", t.reclaimable_bytes.into()),
-                ("hardlinked_files", t.hardlinked_files.into()),
-                ("links_skipped", t.links_skipped.into()),
-                ("errors", t.errors.into()),
-                ("newest_mtime", t.newest_mtime.into()),
-            ]);
-            println!("{v}");
-        } else {
-            println!("{p}");
-            println!(
-                "  files {}   folders {}   links skipped {}   errors {}",
-                t.files, t.dirs, t.links_skipped, t.errors
-            );
-            println!(
-                "  size:              {:>12}  ({} bytes)",
-                human(t.logical_bytes),
-                t.logical_bytes
-            );
-            println!(
-                "  on disk:           {:>12}  ({} bytes)",
-                human(t.allocated_bytes),
-                t.allocated_bytes
-            );
-            println!(
-                "  freed if deleted:  {:>12}  ({} bytes)",
-                human(t.reclaimable_bytes),
-                t.reclaimable_bytes
-            );
-            if t.hardlinked_files > 0 {
-                println!("  {} hardlinked file(s), counted once", t.hardlinked_files);
-            }
+        let v = Value::obj(vec![
+            ("path", p.into()),
+            ("files", t.files.into()),
+            ("dirs", t.dirs.into()),
+            ("logical_bytes", t.logical_bytes.into()),
+            ("allocated_bytes", t.allocated_bytes.into()),
+            ("reclaimable_bytes", t.reclaimable_bytes.into()),
+            ("hardlinked_files", t.hardlinked_files.into()),
+            ("links_skipped", t.links_skipped.into()),
+            ("errors", t.errors.into()),
+            ("newest_mtime", t.newest_mtime.into()),
+        ]);
+        let mut s = format!(
+            "{p}\n  files {}   folders {}   links skipped {}   errors {}\n",
+            t.files, t.dirs, t.links_skipped, t.errors
+        );
+        for (label, bytes) in [
+            ("size:             ", t.logical_bytes),
+            ("on disk:          ", t.allocated_bytes),
+            ("freed if deleted: ", t.reclaimable_bytes),
+        ] {
+            s.push_str(&format!(
+                "  {label} {:>12}  ({bytes} bytes)\n",
+                human(bytes)
+            ));
         }
-    }
-    Ok(ExitCode::SUCCESS)
+        if t.hardlinked_files > 0 {
+            s.push_str(&format!(
+                "  {} hardlinked file(s), counted once\n",
+                t.hardlinked_files
+            ));
+        }
+        Ok((v, s))
+    })
 }
 
 fn cmd_advise(rest: &[String]) -> Result<ExitCode, String> {

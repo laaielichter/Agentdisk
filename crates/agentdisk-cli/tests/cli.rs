@@ -368,6 +368,81 @@ fn explain_command() {
 }
 
 #[test]
+fn size_and_explain_with_several_folders() {
+    let h = tmp("several");
+    let (a, b, nope) = (h.join("a"), h.join("b"), h.join("nope"));
+    for d in [&a, &b] {
+        fs::create_dir_all(d).unwrap();
+        fs::write(d.join("f"), "hi").unwrap();
+    }
+    let s = |p: &PathBuf| p.to_str().unwrap().to_string();
+    let json = |v: &str| agentdisk_core::json::parse(v.trim()).unwrap();
+    for cmd in ["size", "explain"] {
+        let call = |dirs: &[&PathBuf], flags: &[&str]| {
+            let mut args = vec![cmd.to_string()];
+            args.extend(dirs.iter().map(|d| s(d)));
+            args.extend(flags.iter().map(|f| f.to_string()));
+            let args: Vec<&str> = args.iter().map(String::as_str).collect();
+            run(&h, &args)
+        };
+
+        // One folder: a single object.
+        let (code, out, err) = call(&[&a], &["--json"]);
+        assert_eq!(code, 0, "{cmd}: {err}");
+        assert!(json(&out).get("path").is_some(), "{cmd}: {out}");
+
+        // Several: one array, in the order given.
+        let (code, out, err) = call(&[&b, &a], &["--json"]);
+        assert_eq!(code, 0, "{cmd}: {err}");
+        let v = json(&out);
+        let paths: Vec<&str> = v
+            .as_arr()
+            .unwrap()
+            .iter()
+            .map(|e| e.get("path").unwrap().as_str().unwrap())
+            .collect();
+        assert_eq!(paths.len(), 2, "{cmd}: {out}");
+        assert!(
+            paths[0].ends_with('b') && paths[1].ends_with('a'),
+            "{paths:?}"
+        );
+
+        // A missing folder in the middle is reported, the others still run.
+        let (code, out, _) = call(&[&a, &nope, &b], &["--json"]);
+        assert_eq!(code, 1, "{cmd}: {out}");
+        let v = json(&out);
+        let list = v.as_arr().unwrap();
+        assert_eq!(list.len(), 3, "{cmd}: {out}");
+        assert!(list[0].get("error").is_none() && list[2].get("error").is_none());
+        assert!(list[1].get("error").unwrap().as_str().is_some());
+        assert!(list[1]
+            .get("path")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .ends_with("nope"));
+
+        // Text: the error goes to stderr, the other folders still print.
+        let (code, out, err) = call(&[&a, &nope, &b], &[]);
+        assert_eq!(code, 1, "{cmd}: {out}{err}");
+        assert!(err.contains("nope"), "{cmd}: {err}");
+        // `explain` prints the canonical path, which can differ from the one
+        // given (short Windows temp names), so match on the folder name.
+        let printed = |n: &str| {
+            out.lines()
+                .any(|l| l.ends_with(&format!("/{n}")) || l.ends_with(&format!("\\{n}")))
+        };
+        assert!(printed("a") && printed("b"), "{cmd}: {out}");
+
+        // One missing folder keeps today's behaviour.
+        let (code, out, err) = call(&[&nope], &["--json"]);
+        assert_eq!(code, 2, "{cmd}: {out}{err}");
+        assert!(out.is_empty() && err.contains("nope"), "{cmd}: {out}{err}");
+    }
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
 fn manifest_versions_match_cargo() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     for f in [
