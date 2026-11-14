@@ -140,6 +140,26 @@ fn apply_and_purge_refuse_without_a_terminal() {
     fs::remove_dir_all(&h).unwrap();
 }
 
+/// Write a quarantine journal by hand: (original, quarantine) pairs.
+fn write_journal(dir: &Path, entries: &[(&Path, &Path)]) {
+    use agentdisk_core::json::Value;
+    let v: Vec<Value> = entries
+        .iter()
+        .map(|(original, quarantine)| {
+            Value::obj(vec![
+                ("original", original.to_str().unwrap().into()),
+                ("quarantine", quarantine.to_str().unwrap().into()),
+                ("kind", "build-folder".into()),
+                ("bytes", 10u64.into()),
+                ("moved_at", 0u64.into()),
+                ("state", "quarantined".into()),
+            ])
+        })
+        .collect();
+    fs::create_dir_all(dir).unwrap();
+    fs::write(dir.join("journal.json"), Value::Arr(v).pretty()).unwrap();
+}
+
 #[test]
 fn plans_lists_saved_plans_newest_first() {
     let h = tmp("plans");
@@ -203,26 +223,6 @@ fn plans_lists_saved_plans_newest_first() {
     fs::remove_dir_all(&h).unwrap();
 }
 
-/// Write a quarantine journal by hand: (original, quarantine) pairs.
-fn write_journal(dir: &Path, entries: &[(&Path, &Path)]) {
-    use agentdisk_core::json::Value;
-    let v: Vec<Value> = entries
-        .iter()
-        .map(|(original, quarantine)| {
-            Value::obj(vec![
-                ("original", original.to_str().unwrap().into()),
-                ("quarantine", quarantine.to_str().unwrap().into()),
-                ("kind", "build-folder".into()),
-                ("bytes", 10u64.into()),
-                ("moved_at", 0u64.into()),
-                ("state", "quarantined".into()),
-            ])
-        })
-        .collect();
-    fs::create_dir_all(dir).unwrap();
-    fs::write(dir.join("journal.json"), Value::Arr(v).pretty()).unwrap();
-}
-
 #[test]
 fn restore_and_purge_refuse_bad_plan_ids() {
     let h = tmp("badid");
@@ -241,6 +241,55 @@ fn restore_and_purge_refuse_bad_plan_ids() {
         assert!(!out.contains("deleted for good"), "{out}");
     }
     assert!(stray.exists() && !back.exists(), "nothing may move");
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
+fn quarantine_json_and_options() {
+    let h = tmp("quarantine");
+    let plan = h.join("agentdisk/quarantine/20990101-abcdef");
+    let original = h.join("project/node_modules");
+    let quarantine = plan.join("000-node_modules");
+    write_journal(&plan, &[(&original, &quarantine)]);
+
+    let (code, out, err) = run(&h, &["quarantine", "--json"]);
+    assert_eq!(code, 0, "{out}{err}");
+    let v = agentdisk_core::json::parse(out.trim()).unwrap();
+    assert_eq!(v.get("schema_version").unwrap().as_u64(), Some(1));
+    let items = v.get("items").unwrap().as_arr().unwrap();
+    assert_eq!(items.len(), 1);
+    let item = &items[0];
+    assert_eq!(item.get("plan").unwrap().as_str(), Some("20990101-abcdef"));
+    assert_eq!(item.get("state").unwrap().as_str(), Some("quarantined"));
+    assert_eq!(item.get("kind").unwrap().as_str(), Some("build-folder"));
+    assert_eq!(
+        item.get("original").unwrap().as_str(),
+        Some(original.to_str().unwrap())
+    );
+    assert_eq!(
+        item.get("quarantine").unwrap().as_str(),
+        Some(quarantine.to_str().unwrap())
+    );
+
+    let (code, out, err) = run(&h, &["quarantine", "--help"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("agentdisk quarantine [--json]"), "{out}");
+
+    let (code, out, err) = run(&h, &["quarantine", "--bogus"]);
+    assert_eq!(code, 2, "{out}{err}");
+    assert!(err.contains("unknown option '--bogus'"), "{err}");
+
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
+fn quarantine_json_empty_is_stable() {
+    let h = tmp("quarantine-empty");
+    let (code, out, err) = run(&h, &["quarantine", "--json"]);
+    assert_eq!(code, 0, "{out}{err}");
+    let v = agentdisk_core::json::parse(out.trim()).unwrap();
+    assert_eq!(v.get("schema_version").unwrap().as_u64(), Some(1));
+    assert!(v.get("items").unwrap().as_arr().unwrap().is_empty());
     fs::remove_dir_all(&h).unwrap();
 }
 
