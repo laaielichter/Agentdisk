@@ -5,8 +5,7 @@
 - Config and adapter TOML files now ignore one leading UTF-8 byte order mark so their first key loads correctly. Thanks to @dannyward630! (#25, #39)
 - Adapter files are rejected when a path has a `platforms` value other than `windows`, `macos` or `linux`, or has `kind = "worktree"` without a `marker`. Before, such a path was silently never found, or its worktrees were shown as `git`.
 - New: `agentdisk plans [--json]` lists the saved cleanup plans, newest first, with what each would free and whether it is empty, not applied, applied, restored or purged. A plan file that cannot be read is listed as unreadable. Read-only. Thanks to @ariktadas144! (#31, #37)
-
-- `size` and `explain` with several folders: `--json` now prints one JSON array in the order given instead of one object per line, and a folder that cannot be read is reported (`{"path", "error"}` in JSON, stderr in text) without stopping the others. The exit code is 1 if any folder failed. One folder behaves as before.
+- `size` and `explain` with several folders: `--json` now prints one JSON array in the order given instead of one object per line, and a folder that cannot be read is reported (`{"path", "error"}` in JSON, stderr in text) without stopping the others. The exit code is 1 if any folder failed. One folder behaves as before. Thanks to @ariktadas144! (#30, #41)
 
 ## 0.3.1
 
