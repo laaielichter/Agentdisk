@@ -19,6 +19,8 @@
 - The scan report's summary totals, its JSON summary fields and the 40-row build-folder limit are now covered by tests. Thanks to @dannyward630! (#8, #72)
 - Every build-folder rule and marker is documented in one reference, and a test keeps that page in step with the code. Thanks to @dannyward630! (#6, #74)
 - Test coverage for `advise`, `compact`, `config --init` and `quarantine` through the binary: the text and JSON output, refusals, dry runs and empty or populated quarantines are checked. Test-only. Thanks to @dannyward630! (#47, #76)
+- The README has a Spanish translation next to the English one, with a language switcher at the top of the English README; commands, flags and code blocks are unchanged. Thanks to @dannyward630! (#34, #77)
+- `explain` agrees with `plan` on agent caches: a regenerable cache nested inside another adapter folder is reported as `keep` and named after the outer folder, and so is a cache with no reclaimable bytes. Thanks to @ViktorBystrov72! (#13, #78)
 
 ## 0.3.1
 
