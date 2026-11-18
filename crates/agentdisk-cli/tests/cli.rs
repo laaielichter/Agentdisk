@@ -177,6 +177,41 @@ fn version_and_help() {
 }
 
 #[test]
+fn subcommand_help_explains_each_command() {
+    let h = tmp("subcommand-help");
+    // Quarantine's help is covered by a separate issue.
+    for command in [
+        "scan", "size", "explain", "advise", "check", "adapters", "plans", "plan", "apply",
+        "restore", "purge", "compact", "mcp", "config",
+    ] {
+        let (code, out, err) = run(&h, &[command, "--help"]);
+        assert_eq!(code, 0, "{command}: {out}{err}");
+        assert!(
+            out.starts_with(&format!("agentdisk {command}")),
+            "{command}: {out}"
+        );
+        if matches!(command, "advise" | "plan") {
+            for flag in ["--depth", "--threads", "--adapters", "--no-agents"] {
+                assert!(
+                    out.contains(flag),
+                    "{command} help is missing {flag}: {out}"
+                );
+            }
+        }
+    }
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
+fn mcp_rejects_unknown_options() {
+    let h = tmp("mcp-unknown-option");
+    let (code, out, err) = run(&h, &["mcp", "--bogus"]);
+    assert_eq!(code, 2, "{out}{err}");
+    assert!(err.contains("unknown option '--bogus'"), "{err}");
+    fs::remove_dir_all(&h).unwrap();
+}
+
+#[test]
 fn advise_runs_through_the_cli_in_text_and_json() {
     let h = tmp("advise-cli");
     let (code, out, err) = run(&h, &["advise", "--no-agents"]);
